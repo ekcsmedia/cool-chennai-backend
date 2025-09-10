@@ -4,16 +4,19 @@ import {dashboardRoutes} from "../controllers/DashboardController";
 import {exportRoutes} from "../controllers/ExportController";
 import {historyRoutes} from "../controllers/HistoryController";
 import {trackingRoutes} from "../controllers/TrackingController";
-import {collectionRoutes} from "../controllers/CollectionsController";
 import {notificationsRoutes} from "../controllers/NotificationsController";
-
+import {agentRoutes} from "./agentRoutes";
+import collectionRoutes from "./collection.routes";
+import callRoutes from "./call.routes";
 
 export const registerRoutes = (app: FastifyInstance) => {
-    app.register(dashboardRoutes, { prefix: "/dashboard" });
-    app.register(collectionRoutes, { prefix: "/collections" });
-    // app.register(agentRoutes, { prefix: "/agents" });
-    app.register(trackingRoutes, { prefix: "/tracking" });
-    app.register(historyRoutes, { prefix: "/history" });
-    app.register(notificationsRoutes, { prefix: "/notifications" });
-    app.register(exportRoutes, { prefix: "/export" });
+    app.register(dashboardRoutes, { prefix: "/api" });
+    app.register(collectionRoutes, { prefix: "/api" });
+    app.register(agentRoutes, { prefix: "/api" });
+    app.register(trackingRoutes, { prefix: "/api" });
+    app.register(historyRoutes, { prefix: "/api" });
+    app.register(notificationsRoutes, { prefix: "/api" });
+    app.register(exportRoutes, { prefix: "/api" });
+    app.register(callRoutes, { prefix: "/api" });
+
 };

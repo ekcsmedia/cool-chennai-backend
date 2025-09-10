@@ -20,7 +20,7 @@ export const buildServer = () => {
     app.decorate("db", sequelize);
 
     // Health check
-    app.get("/health", async () => ({ status: "ok" }));
+    app.get("/health", async () => ({ status: "Health is good" }));
 
     // Register feature routes
     registerRoutes(app);

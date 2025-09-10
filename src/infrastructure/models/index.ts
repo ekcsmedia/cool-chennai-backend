@@ -9,6 +9,7 @@ AgentModel.init({
     isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
     status: { type: DataTypes.ENUM('on_duty', 'idle', 'off_duty'), defaultValue: 'idle' },
     lastSeenAt: DataTypes.DATE,
+    password: { type: DataTypes.STRING, allowNull: false },
 }, { sequelize, tableName: 'agents', timestamps: true, paranoid: true });
 
 export class CustomerModel extends Model {}
@@ -82,3 +83,9 @@ CollectionModel.belongsTo(CustomerModel, { foreignKey: 'customerId' });
 CollectionModel.belongsTo(AgentModel, { foreignKey: 'assignedAgentId', as: 'assignedAgent' });
 AssignmentModel.belongsTo(CollectionModel, { foreignKey: 'collectionId' });
 AssignmentModel.belongsTo(AgentModel, { foreignKey: 'agentId' });
+
+
+TripHistoryModel.belongsTo(CollectionModel, { foreignKey: 'collectionId', as: 'collection' });
+TripHistoryModel.belongsTo(AgentModel, { foreignKey: 'agentId', as: 'agent' });
+CollectionModel.belongsTo(CustomerModel, { foreignKey: 'customerId', as: 'customer' });
+AgentModel.hasMany(TripHistoryModel, { foreignKey: 'agentId', as: 'trips' });

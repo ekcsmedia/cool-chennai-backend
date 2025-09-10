@@ -7,4 +7,7 @@ export interface Agent {
     isActive: boolean;
     status: AgentStatus;
     lastSeenAt?: Date | null;
+    password: string; // hashed
+    createdAt?: Date;
+    updatedAt?: Date;
 }
