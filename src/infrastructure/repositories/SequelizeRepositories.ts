@@ -200,19 +200,69 @@ export const trackingRepo: TrackingRepository = {
     },
 };
 
-export const notificationRepo: NotificationRepository = {
-    async list(role) { const rows = await NotificationModel.findAll({ where: { actorRole: role }, order: [['createdAt','DESC']] }); return rows.map(r=>r.toJSON() as any); },
-    async updateStatus(id, status) { await NotificationModel.update({ status }, { where: { id } }); },
+// add/replace inside your SequelizeRepositories.ts (or notificationRepo file)
+/**
+ * NotificationRepository
+ * NotificationModel fields (from your schema):
+ *  id, title, body, kind, status, actorRole ('admin'|'agent'), meta (JSON), createdAt, dueAt
+ */
+export const notificationRepo = {
+    // create + optionally target an agentId in meta
+    async create(payload: {
+        title: string;
+        body: string;
+        kind?: 'assignment' | 'overdue' | 'generic';
+        actorRole?: 'admin' | 'agent';
+        meta?: any;
+        dueAt?: Date | string | null;
+    }) {
+        const row = await NotificationModel.create({
+            title: payload.title,
+            body: payload.body,
+            kind: payload.kind ?? 'generic',
+            actorRole: payload.actorRole ?? 'admin',
+            meta: payload.meta ?? null,
+            status: 'new',
+            createdAt: new Date(),
+            dueAt: payload.dueAt ?? null,
+        });
+        return row.toJSON() as any;
+    },
+
+    // list by actorRole; newest first
+    async list(actorRole: 'admin' | 'agent') {
+        const rows = await NotificationModel.findAll({
+            where: { actorRole },
+            order: [['createdAt', 'DESC']],
+        });
+        return rows.map((r) => r.toJSON() as any);
+    },
+
+    async updateStatus(id: string, status: 'new' | 'snoozed' | 'in_progress' | 'done') {
+        await NotificationModel.update({ status }, { where: { id } });
+        const row = await NotificationModel.findByPk(id);
+        return row ? (row.toJSON() as any) : null;
+    },
+
+    // optional: list unread or since date
+    async listUnread(actorRole: 'admin' | 'agent') {
+        const rows = await NotificationModel.findAll({
+            where: {
+                actorRole,
+                status: { [Op.ne]: 'done' },
+            },
+            order: [['createdAt', 'DESC']],
+        });
+        return rows.map((r) => r.toJSON() as any);
+    },
 };
+
 
 // inside src/infrastructure/repositories/SequelizeRepositories.ts
 // add at top if not present:
+// imports (ensure these are present at top of file)
+// historyRepo (only the history-related functions shown)
 export const historyRepo = {
-    /**
-     * List trip history for an agent.
-     * If date is provided (YYYY-MM-DD) it restricts to that day.
-     * Pagination supported via page & limit (pass null from route; route will handle defaults).
-     */
     async listByAgent(agentId: string, date?: string, page = 1, limit = 20) {
         const where: any = { agentId };
 
@@ -228,7 +278,19 @@ export const historyRepo = {
         const { rows, count } = await TripHistoryModel.findAndCountAll({
             where,
             include: [
-                { model: CollectionModel, as: 'collection', attributes: ['id', 'code', 'area', 'city', 'amount', 'status', 'customerId', 'assignedAgentId'] },
+                {
+                    model: CollectionModel,
+                    as: 'collection',
+                    attributes: ['id', 'code', 'area', 'city', 'amount', 'status', 'customerId', 'assignedAgentId'],
+                    include: [
+                        {
+                            model: CustomerModel,
+                            as: 'customer',
+                            attributes: ['id', 'name', 'phone'],
+                            required: false,
+                        },
+                    ],
+                },
                 { model: AgentModel, as: 'agent', attributes: ['id', 'name', 'phone'] },
             ],
             order: [['completedAt', 'DESC']],
@@ -236,7 +298,6 @@ export const historyRepo = {
             offset,
         });
 
-        // shape DTOs
         const items = rows.map(r => {
             const trip = r.toJSON() as any;
             return {
@@ -251,7 +312,7 @@ export const historyRepo = {
                     address: [trip.collection.area, trip.collection.city].filter(Boolean).join(' • '),
                     amount: trip.collection.amount,
                     status: trip.collection.status,
-                    customerId: trip.collection.customerId,
+                    customer: trip.collection.customer ? { id: trip.collection.customer.id, name: trip.collection.customer.name, phone: trip.collection.customer.phone } : null,
                 } : null,
                 agent: trip.agent ? { id: trip.agent.id, name: trip.agent.name, phone: trip.agent.phone } : null,
             };
@@ -260,22 +321,15 @@ export const historyRepo = {
         return { items, total: count, page, limit };
     },
 
-    /**
-     * List trip history for a customer (all trips that reference collections with this customerId).
-     * Supports date range and pagination.
-     */
     async listByCustomer(customerId: string, from?: string, to?: string, page = 1, limit = 20) {
-        // first find collections for the customer
-        const colWhere: any = { customerId };
-
-        // optionally restrict by collection createdAt if from/to provided
+        // We will join TripHistory -> Collection and restrict collection.customerId
+        const collectionWhere: any = { customerId };
         if (from || to) {
-            colWhere.createdAt = {};
-            if (from) colWhere.createdAt[Op.gte] = new Date(from);
-            if (to) colWhere.createdAt[Op.lte] = new Date(to);
+            collectionWhere.createdAt = {};
+            if (from) collectionWhere.createdAt[Op.gte] = new Date(from);
+            if (to) collectionWhere.createdAt[Op.lte] = new Date(to);
         }
 
-        // join through trip history via collectionId
         const offset = (Math.max(1, page) - 1) * limit;
 
         const { rows, count } = await TripHistoryModel.findAndCountAll({
@@ -283,8 +337,11 @@ export const historyRepo = {
                 {
                     model: CollectionModel,
                     as: 'collection',
-                    where: colWhere,
+                    where: collectionWhere,
                     attributes: ['id', 'code', 'area', 'city', 'amount', 'status', 'customerId'],
+                    include: [
+                        { model: CustomerModel, as: 'customer', attributes: ['id','name','phone'], required: false }
+                    ],
                 },
                 { model: AgentModel, as: 'agent', attributes: ['id', 'name'] },
             ],
@@ -307,6 +364,7 @@ export const historyRepo = {
                     address: [trip.collection.area, trip.collection.city].filter(Boolean).join(' • '),
                     amount: trip.collection.amount,
                     status: trip.collection.status,
+                    customer: trip.collection.customer ? { id: trip.collection.customer.id, name: trip.collection.customer.name } : null,
                 } : null,
                 agent: trip.agent ? { id: trip.agent.id, name: trip.agent.name } : null,
             };
@@ -315,10 +373,6 @@ export const historyRepo = {
         return { items, total: count, page, limit };
     },
 
-    /**
-     * Admin listing: search across trip_history (joined with collections & agents & customers).
-     * Filters: from/to (dates restrict completedAt), agentId, customerId, status (collection status), pagination.
-     */
     async listCollectionsHistory({ from, to, agentId, customerId, status, page = 1, limit = 20 }: {
         from?: string; to?: string; agentId?: string; customerId?: string; status?: string; page?: number; limit?: number;
     }) {
@@ -330,7 +384,6 @@ export const historyRepo = {
         }
         if (agentId) where.agentId = agentId;
 
-        // For customer/status filters we push conditions into collection include
         const collectionWhere: any = {};
         if (customerId) collectionWhere.customerId = customerId;
         if (status) collectionWhere.status = status;
@@ -340,9 +393,16 @@ export const historyRepo = {
         const { rows, count } = await TripHistoryModel.findAndCountAll({
             where,
             include: [
-                { model: CollectionModel, as: 'collection', where: Object.keys(collectionWhere).length ? collectionWhere : undefined, attributes: ['id','code','area','city','amount','status','customerId'] },
+                {
+                    model: CollectionModel,
+                    as: 'collection',
+                    where: Object.keys(collectionWhere).length ? collectionWhere : undefined,
+                    attributes: ['id','code','area','city','amount','status','customerId'],
+                    include: [
+                        { model: CustomerModel, as: 'customer', attributes: ['id','name'], required: false }
+                    ],
+                },
                 { model: AgentModel, as: 'agent', attributes: ['id','name','phone'] },
-                { model: CustomerModel, as: 'customer', attributes: ['id','name'], required: false }, // optional if you linked customer on history
             ],
             order: [['completedAt', 'DESC']],
             limit,
@@ -363,6 +423,7 @@ export const historyRepo = {
                     address: [trip.collection.area, trip.collection.city].filter(Boolean).join(' • '),
                     amount: trip.collection.amount,
                     status: trip.collection.status,
+                    customer: trip.collection.customer ? { id: trip.collection.customer.id, name: trip.collection.customer.name } : null,
                 } : null,
                 agent: trip.agent ? { id: trip.agent.id, name: trip.agent.name } : null,
             };
@@ -371,15 +432,17 @@ export const historyRepo = {
         return { items, total: count, page, limit };
     },
 
-    /**
-     * single collection trips (return all trips for a given collection id)
-     */
     async getByCollectionId(collectionId: string) {
         const rows = await TripHistoryModel.findAll({
             where: { collectionId },
             include: [
                 { model: AgentModel, as: 'agent', attributes: ['id','name'] },
-                { model: CollectionModel, as: 'collection', attributes: ['id','code','area','city','amount','status','customerId'] },
+                {
+                    model: CollectionModel,
+                    as: 'collection',
+                    attributes: ['id','code','area','city','amount','status','customerId'],
+                    include: [{ model: CustomerModel, as: 'customer', attributes: ['id','name','phone'], required: false }]
+                },
             ],
             order: [['startedAt', 'ASC']],
         });
@@ -399,8 +462,10 @@ export const historyRepo = {
                     address: [trip.collection.area, trip.collection.city].filter(Boolean).join(' • '),
                     amount: trip.collection.amount,
                     status: trip.collection.status,
+                    customer: trip.collection.customer ? { id: trip.collection.customer.id, name: trip.collection.customer.name } : null,
                 } : null,
             };
         });
     },
 };
+

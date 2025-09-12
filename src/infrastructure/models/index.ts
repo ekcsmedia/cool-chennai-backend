@@ -12,6 +12,15 @@ AgentModel.init({
     password: { type: DataTypes.STRING, allowNull: false },
 }, { sequelize, tableName: 'agents', timestamps: true, paranoid: true });
 
+export class DeviceTokenModel extends Model {}
+DeviceTokenModel.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    agentId: { type: DataTypes.UUID, allowNull: true },
+    platform: { type: DataTypes.ENUM('android','ios','web'), allowNull: false },
+    token: { type: DataTypes.STRING(512), allowNull: false, unique: true },
+    lastSeenAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+}, { sequelize, tableName: 'device_tokens', timestamps: true });
+
 export class CustomerModel extends Model {}
 CustomerModel.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
