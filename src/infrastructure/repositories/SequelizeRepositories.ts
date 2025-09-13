@@ -19,9 +19,12 @@ import {Agent} from "../../core/entities/Agent";
 import {Op} from "sequelize";
 
 export const agentRepo: AgentRepository = {
-    async createAgent(name: string, email: string, password: string) {
+    async createAgent(name: string, email: string, password: string, phone?: string) {
         const hashed = await bcrypt.hash(password, 10);
-        const row = await AgentModel.create({ name, email, password: hashed });
+        const row = await AgentModel.create({ name,
+            email,
+            phone,
+            password: hashed });
         const obj = row.toJSON() as any;
         // hide password from returned object
         if (obj.password) delete obj.password;
@@ -34,12 +37,12 @@ export const agentRepo: AgentRepository = {
         return rows.map(r => r.toJSON() as any);
     },
 
-    async getAgentById(id: number) {
+    async getAgentById(id: string) {
         const row = await AgentModel.findByPk(id, { attributes: { exclude: ['password'] } });
         return row ? (row.toJSON() as any) : null;
     },
 
-    async updateAgent(id: number, data: any) {
+    async updateAgent(id: string, data: any) {
         if (data.password) {
             data.password = await bcrypt.hash(data.password, 10);
         }
@@ -49,7 +52,7 @@ export const agentRepo: AgentRepository = {
         return row ? (row.toJSON() as any) : null;
     },
 
-    async deleteAgent(id: number) {
+    async deleteAgent(id: string) {
         return AgentModel.destroy({ where: { id } });
     },
 
@@ -78,16 +81,16 @@ export const agentRepo: AgentRepository = {
         return rows.map(r => r.toJSON() as any);
     },
 
-    async findById(id: number) {
+    async findById(id: string) {
         const row = await AgentModel.findByPk(id, { attributes: { exclude: ['password'] } });
         return row ? (row.toJSON() as any) : null;
     },
 
-    async updateStatus(id: number, status: string) {
+    async updateStatus(id: string, status: string) {
         await AgentModel.update({ status }, { where: { id } });
     },
 
-    async updateLastSeen(id: number, at: Date) {
+    async updateLastSeen(id: string, at: Date) {
         await AgentModel.update({ lastSeenAt: at }, { where: { id } });
     },
 };

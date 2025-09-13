@@ -15,7 +15,7 @@ export class AgentController {
 
     static async get(req: FastifyRequest, rep: FastifyReply) {
         const { id } = req.params as any;
-        const agent = await agentRepo.getAgentById(Number(id));
+        const agent = await agentRepo.getAgentById(id);
         return agent
             ? rep.send(agent)
             : rep.code(404).send({ error: "Not found" });
@@ -23,13 +23,13 @@ export class AgentController {
 
     static async update(req: FastifyRequest, rep: FastifyReply) {
         const { id } = req.params as any;
-        const updated = await agentRepo.updateAgent(Number(id), req.body as any);
+        const updated = await agentRepo.updateAgent(id, req.body as any);
         return rep.send(updated);
     }
 
     static async delete(req: FastifyRequest, rep: FastifyReply) {
         const { id } = req.params as any;
-        await agentRepo.deleteAgent(Number(id));
+        await agentRepo.deleteAgent(id);
         return rep.send({ success: true });
     }
 
@@ -43,7 +43,7 @@ export class AgentController {
     // 🔹 NEW: wrapper for agentRepo.findById
     static async findById(req: FastifyRequest, rep: FastifyReply) {
         const { id } = req.params as any;
-        const agent = await agentRepo.findById(Number(id));
+        const agent = await agentRepo.findById(id);
         return agent
             ? rep.send(agent)
             : rep.code(404).send({ error: "Not found" });
@@ -53,7 +53,7 @@ export class AgentController {
     static async updateStatus(req: FastifyRequest, rep: FastifyReply) {
         const { id } = req.params as any;
         const { status } = req.body as any;
-        await agentRepo.updateStatus(Number(id), status);
+        await agentRepo.updateStatus(id, status);
         return rep.send({ success: true });
     }
 
@@ -61,7 +61,7 @@ export class AgentController {
     static async updateLastSeen(req: FastifyRequest, rep: FastifyReply) {
         const { id } = req.params as any;
         const { at } = req.body as any; // expect ISO string
-        await agentRepo.updateLastSeen(Number(id), new Date(at));
+        await agentRepo.updateLastSeen(id, new Date(at));
         return rep.send({ success: true });
     }
 }

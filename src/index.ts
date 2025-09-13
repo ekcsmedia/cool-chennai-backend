@@ -14,7 +14,7 @@ export const start = async () => {
     try {
         // 1) DB
         await sequelize.authenticate();
-        await sequelize.sync(); // ⚠️ in prod use migrations
+        await sequelize.sync({ alter: true }); // ⚠️ in prod use migrations
         console.log("✅ Database connected");
 
         // 2) Firebase (optional: only if service account provided)

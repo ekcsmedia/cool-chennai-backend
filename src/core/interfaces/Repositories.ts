@@ -6,18 +6,19 @@ import { Notification } from '../entities/Notification';
 import { TripHistory } from '../entities/History';
 
 export interface AgentRepository {
-    createAgent(name: string, email: string, password: string): Promise<Agent>;
+    createAgent(name: string, email: string, password: string, phone?: string): Promise<Agent>;
     getAgents(): Promise<Agent[]>;
-    getAgentById(id: number): Promise<Agent | null>;
-    updateAgent(id: number, data: Partial<Agent>): Promise<Agent | null>;
-    deleteAgent(id: number): Promise<number>;
+    getAgentById(id: string): Promise<Agent | null>;   // changed to string
+    updateAgent(id: string, data: Partial<Agent>): Promise<Agent | null>;  // string
+    deleteAgent(id: string): Promise<number>;  // string
     verifyLogin(email: string, password: string): Promise<Agent | null>;
     getActiveCount(): Promise<number>;
     findAll(params?: { activeOnly?: boolean }): Promise<Agent[]>;
-    findById(id: number): Promise<Agent | null>;
-    updateStatus(id: number, status: string): Promise<void>;
-    updateLastSeen(id: number, at: Date): Promise<void>;
+    findById(id: string): Promise<Agent | null>;   // string
+    updateStatus(id: string, status: string): Promise<void>;   // string
+    updateLastSeen(id: string, at: Date): Promise<void>;   // string
 }
+
 
 export interface CollectionRepository {
     getSummaryCounts(): Promise<{ total: number; pending: number; completed: number }>;
