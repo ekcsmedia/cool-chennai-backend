@@ -1,50 +1,51 @@
-import { DataTypes, Model, Optional } from "sequelize";
-import sequelize from "../sequelize";
+// src/models/reminder.model.ts
+import { DataTypes, Model, Optional } from 'sequelize';
+import sequelize from '../sequelize';
 
-interface ReminderAttributes {
-    id: number;
-    collectionId: number;
-    customerId: number;
-    agentId: number;
-    notifyVia: string;
+export type NotifyVia = 'sms' | 'push' | 'both';
+export type ReminderStatus = 'scheduled' | 'sent' | 'cancelled';
+
+export interface ReminderAttributes {
+    id: string;               // UUID
+    collectionId: string;     // UUID
+    customerId?: string | null;
+    agentId?: string | null;
+    notifyVia: NotifyVia;
     remindAt: Date;
     message?: string | null;
-    status: string;
+    status?: ReminderStatus;
     createdAt?: Date;
     updatedAt?: Date;
 }
 
-interface ReminderCreation extends Optional<ReminderAttributes, "id" | "status" | "createdAt" | "updatedAt"> {}
+export type ReminderCreationAttributes = Optional<ReminderAttributes, 'id' | 'status' | 'createdAt' | 'updatedAt'>;
 
-export class ReminderModel extends Model<ReminderAttributes, ReminderCreation> implements ReminderAttributes {
-    public id!: number;
-    public collectionId!: number;
-    public customerId!: number;
-    public agentId!: number;
-    public notifyVia!: string;
+export class ReminderModel extends Model<ReminderAttributes, ReminderCreationAttributes>
+    implements ReminderAttributes {
+    public id!: string;
+    public collectionId!: string;
+    public customerId!: string | null;
+    public agentId!: string | null;
+    public notifyVia!: NotifyVia;
     public remindAt!: Date;
-    public message?: string | null;
-    public status!: string;
+    public message!: string | null;
+    public status!: ReminderStatus;
+
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
 
-ReminderModel.init(
-    {
-        id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-        collectionId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-        customerId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-        agentId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-        notifyVia: { type: DataTypes.ENUM("sms", "push", "both"), allowNull: false },
-        remindAt: { type: DataTypes.DATE, allowNull: false },
-        message: { type: DataTypes.TEXT, allowNull: true },
-        status: { type: DataTypes.ENUM("scheduled", "sent", "cancelled"), allowNull: false, defaultValue: "scheduled" },
-    },
-    {
-        sequelize,
-        tableName: "reminders",
-        timestamps: true,
-    }
-);
-
-export default ReminderModel;
+ReminderModel.init({
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    collectionId: { type: DataTypes.UUID, allowNull: false },
+    customerId: { type: DataTypes.UUID, allowNull: true },
+    agentId: { type: DataTypes.UUID, allowNull: true },
+    notifyVia: { type: DataTypes.ENUM('sms','push','both'), allowNull: false },
+    remindAt: { type: DataTypes.DATE, allowNull: false },
+    message: { type: DataTypes.TEXT, allowNull: true },
+    status: { type: DataTypes.ENUM('scheduled','sent','cancelled'), defaultValue: 'scheduled' },
+}, {
+    sequelize,
+    tableName: 'reminders',
+    timestamps: true,
+});

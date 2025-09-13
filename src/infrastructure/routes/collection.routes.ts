@@ -2,13 +2,19 @@ import { FastifyInstance } from "fastify";
 import { CollectionController } from "../controllers/collection.controller";
 
 export default async function collectionRoutes(fastify: FastifyInstance) {
-    fastify.get("/collections/today", CollectionController.listToday);
-    fastify.get("/collections/:id", CollectionController.getById);
-    fastify.put("/collections/:id/status", CollectionController.updateStatus);
+    // --- CRUD ---
+    fastify.post("/collections", CollectionController.create);        // Create new collection
+    fastify.get("/collections", CollectionController.listAll);        // List all collections (with filters)
+    fastify.get("/collections/today", CollectionController.listToday);// List today's or pending
+    fastify.get("/collections/:id", CollectionController.getById);    // Get by id
+    fastify.put("/collections/:id", CollectionController.update);     // Update details
+    fastify.delete("/collections/:id", CollectionController.remove);  // Delete (soft delete since model is paranoid)
 
+    // --- Status + Assignment ---
+    fastify.put("/collections/:id/status", CollectionController.updateStatus);
     fastify.post("/collections/assign", CollectionController.assign);
 
-    // reminders
+    // --- Reminders ---
     fastify.post("/collections/reminders", CollectionController.addReminder);
     fastify.get("/collections/:id/reminders", CollectionController.listReminders);
 }

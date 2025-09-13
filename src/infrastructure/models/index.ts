@@ -29,19 +29,88 @@ CustomerModel.init({
     area: DataTypes.STRING,
 }, { sequelize, tableName: 'customers', timestamps: true, paranoid: true });
 
-export class CollectionModel extends Model {}
-CollectionModel.init({
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    code: { type: DataTypes.STRING, allowNull: false, unique: true },
-    type: { type: DataTypes.ENUM('pickup', 'delivery', 'service'), allowNull: false },
-    area: DataTypes.STRING,
-    city: DataTypes.STRING,
-    amount: { type: DataTypes.INTEGER, allowNull: false },
-    status: { type: DataTypes.ENUM('pending','assigned','in_progress','completed','cancelled'), defaultValue: 'pending' },
-    customerId: { type: DataTypes.UUID, allowNull: true },
-    assignedAgentId: { type: DataTypes.UUID, allowNull: true },
-    dueAt: { type: DataTypes.DATE, allowNull: true },
-}, { sequelize, tableName: 'collections', timestamps: true, paranoid: true });
+// src/models/collection.model.ts  (adjust path if needed)
+// ---- 1) Attribute interfaces ----
+export type CollectionType = 'pickup' | 'delivery' | 'service';
+export type CollectionStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface CollectionAttributes {
+    id: string;
+    code: string;
+    title: string;
+    address: string;
+    type: CollectionType;
+    area?: string | null;
+    city?: string | null;
+    amount: number;
+    status: CollectionStatus;
+    customerId?: string | null;
+    assignedAgentId?: string | null;
+    dueAt?: Date | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+    deletedAt?: Date | null;
+}
+
+// When creating a collection, these fields can be optional:
+export type CollectionCreationAttributes = Optional<
+    CollectionAttributes,
+    'id' | 'status' | 'createdAt' | 'updatedAt' | 'deletedAt'
+>;
+
+// ---- 2) Model class with typed properties ----
+export class CollectionModel extends Model<CollectionAttributes, CollectionCreationAttributes>
+    implements CollectionAttributes {
+    public id!: string;
+    public title!: string;
+    public address!: string;
+    public code!: string;
+    public type!: CollectionType;
+    public area!: string | null;
+    public city!: string | null;
+    public amount!: number;
+    public status!: CollectionStatus;
+    public customerId!: string | null;
+    public assignedAgentId!: string | null;
+    public dueAt!: Date | null;
+
+    // timestamps
+    public readonly createdAt!: Date;
+    public readonly updatedAt!: Date;
+    public readonly deletedAt!: Date | null;
+
+    // If you use associations, you can add convenience fields here, e.g.
+    // public readonly assignedAgent?: AgentModel | null;
+}
+
+// ---- 3) Init / mapping (exactly your previous attributes) ----
+CollectionModel.init(
+    {
+        id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+        code: { type: DataTypes.STRING, allowNull: false, unique: true },
+        title: { type: DataTypes.STRING, allowNull: false, unique: false },
+        address: { type: DataTypes.STRING, allowNull: false, unique: false },
+        type: { type: DataTypes.ENUM('pickup', 'delivery', 'service'), allowNull: false },
+        area: DataTypes.STRING,
+        city: DataTypes.STRING,
+        amount: { type: DataTypes.INTEGER, allowNull: false },
+        status: {
+            type: DataTypes.ENUM('pending','assigned','in_progress','completed','cancelled'),
+            defaultValue: 'pending'
+        },
+        customerId: { type: DataTypes.UUID, allowNull: true },
+        assignedAgentId: { type: DataTypes.UUID, allowNull: true },
+        dueAt: { type: DataTypes.DATE, allowNull: true },
+    },
+    {
+        sequelize,
+        tableName: 'collections',
+        timestamps: true,
+        paranoid: true,
+        underscored: false,
+    }
+);
+
 
 export class AssignmentModel extends Model {}
 AssignmentModel.init({

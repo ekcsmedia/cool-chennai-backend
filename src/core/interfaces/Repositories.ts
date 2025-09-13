@@ -1,6 +1,4 @@
 import { Agent } from '../entities/Agent';
-import { Collection } from '../entities/Collection';
-import { Assignment } from '../entities/Assignment';
 import { LocationPing } from '../entities/LocationPing';
 import { Notification } from '../entities/Notification';
 import { TripHistory } from '../entities/History';
@@ -20,39 +18,90 @@ export interface AgentRepository {
 }
 
 
+// src/core/interfaces/Repositories/CollectionRepository.ts
+export type CollectionType = 'pickup' | 'delivery' | 'service';
+export type CollectionStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'collected';
+
+export interface Collection {
+    id: string;
+    code?: string;
+    callId?: string; // optional alias
+    title: string;
+    address: string;
+    amount: number;
+    type: CollectionType;
+    area?: string | null;
+    city?: string | null;
+    status: CollectionStatus;
+    customerId?: string | null;
+    assignedAgentId?: string | null;
+    assignedAgentName?: string | null; // useful for UI
+    dueAt?: string | null; // ISO string
+    collectedAmount?: number | null;
+    collectedAt?: string | null;
+    deliveredAt?: string | null;
+    notes?: string | null;
+    proofUrl?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+    deletedAt?: string | null;
+}
+
+export interface Assignment {
+    id: string;
+    collectionId: string;
+    agentId: string;
+    assignedAt: string; // ISO
+    reassignedFromId?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface PaginatedResult<T> {
+    items: T[];
+    total: number;
+    page: number;
+    limit: number;
+}
+
+/**
+ * CollectionRepository: the data layer contract for collections
+ */
 export interface CollectionRepository {
+    // summary counts
     getSummaryCounts(): Promise<{ total: number; pending: number; completed: number }>;
+
+    // basic lists
     findPending(): Promise<Collection[]>;
-    findById(id: string | number): Promise<Collection | null>;
+    findAll(opts?: { filters?: Partial<Pick<Collection, 'status' | 'assignedAgentId' | 'customerId'>>; page?: number; limit?: number; }): Promise<PaginatedResult<Collection>>;
 
-    // assign agent
-    assign(collectionId: string | number, agentId: string | number): Promise<{
-        assignment: Assignment;
-        collection: Collection | null;
-    }>;
+    // by id
+    findById(id: string): Promise<Collection | null>;
 
-    // generic update
-    update(collectionId: string | number, data: Partial<Collection>): Promise<Collection | null>;
+    // create / update / delete
+    create(payload: {
+        code?: string;
+        title: string;
+        address: string;
+        amount: number;
+        type?: CollectionType;
+        area?: string | null;
+        city?: string | null;
+        customerId?: string | null;
+        assignedAgentId?: string | null;
+        dueAt?: Date | string | null;
+    }): Promise<Collection>;
+
+    update(collectionId: string, data: Partial<Collection & { dueAt?: Date | string | null }>): Promise<Collection | null>;
+    delete(collectionId: string): Promise<number>; // returns number of rows deleted
+
+    // assign agent (atomic) — returns created assignment + updated collection
+    assign(collectionId: string, agentId: string): Promise<{ assignment: Assignment; collection: Collection | null }>;
 
     // status helpers
-    updateStatus(
-        collectionId: string | number,
-        status: string,
-        extra?: any
-    ): Promise<Collection | null>;
-
-    markCollected(
-        collectionId: string | number,
-        collectedAmount?: number,
-        notes?: string,
-        proofUrl?: string
-    ): Promise<Collection | null>;
-
-    markDelivered(
-        collectionId: string | number,
-        notes?: string,
-        proofUrl?: string
-    ): Promise<Collection | null>;
+    updateStatus(collectionId: string, status: CollectionStatus | string, extra?: any): Promise<Collection | null>;
+    markCollected(collectionId: string, collectedAmount?: number, notes?: string, proofUrl?: string): Promise<Collection | null>;
+    markDelivered(collectionId: string, notes?: string, proofUrl?: string): Promise<Collection | null>;
 }
 
 export interface TrackingRepository {
