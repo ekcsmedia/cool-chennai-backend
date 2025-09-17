@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { historyRepo } from '../repositories/SequelizeRepositories';
+import {historyRepo} from "../repositories/history.repository";
 
 export const HistoryController = {
     async listAgent(req: FastifyRequest, rep: FastifyReply) {

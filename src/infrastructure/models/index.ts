@@ -12,14 +12,63 @@ AgentModel.init({
     password: { type: DataTypes.STRING, allowNull: false },
 }, { sequelize, tableName: 'agents', timestamps: true, paranoid: true });
 
-export class DeviceTokenModel extends Model {}
-DeviceTokenModel.init({
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    agentId: { type: DataTypes.UUID, allowNull: true },
-    platform: { type: DataTypes.ENUM('android','ios','web'), allowNull: false },
-    token: { type: DataTypes.STRING(512), allowNull: false, unique: true },
-    lastSeenAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
-}, { sequelize, tableName: 'device_tokens', timestamps: true });
+interface DeviceTokenAttributes {
+    id: string;
+    agentId?: string | null;
+    platform: "android" | "ios" | "web";
+    token: string;
+    lastSeenAt: Date;
+}
+
+// 2. Define creation attributes (id & lastSeenAt are auto-generated)
+interface DeviceTokenCreationAttributes
+    extends Optional<DeviceTokenAttributes, "id" | "lastSeenAt"> {}
+
+// 3. Extend Sequelize Model with types
+export class DeviceTokenModel
+    extends Model<DeviceTokenAttributes, DeviceTokenCreationAttributes>
+    implements DeviceTokenAttributes
+{
+    public id!: string;
+    public agentId!: string | null;
+    public platform!: "android" | "ios" | "web";
+    public token!: string;
+    public lastSeenAt!: Date;
+
+    // timestamps!
+    public readonly createdAt!: Date;
+    public readonly updatedAt!: Date;
+}
+
+// 4. Init model
+DeviceTokenModel.init(
+    {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
+        agentId: {
+            type: DataTypes.UUID,
+            allowNull: true,
+        },
+        platform: {
+            type: DataTypes.ENUM("android", "ios", "web"),
+            allowNull: false,
+        },
+        token: {
+            type: DataTypes.STRING(512),
+            allowNull: false,
+            unique: true,
+        },
+        lastSeenAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW,
+        },
+    },
+    { sequelize, tableName: "device_tokens", timestamps: true }
+);
 
 export class CustomerModel extends Model {}
 CustomerModel.init({
@@ -32,13 +81,14 @@ CustomerModel.init({
 // src/models/collection.model.ts  (adjust path if needed)
 // ---- 1) Attribute interfaces ----
 export type CollectionType = 'pickup' | 'delivery' | 'service';
-export type CollectionStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+export type CollectionStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'collected';
 
 export interface CollectionAttributes {
     id: string;
     code: string;
     title: string;
     address: string;
+    customerName?: string | null; // ✅ added
     type: CollectionType;
     area?: string | null;
     city?: string | null;
@@ -46,7 +96,19 @@ export interface CollectionAttributes {
     status: CollectionStatus;
     customerId?: string | null;
     assignedAgentId?: string | null;
+
+    // ✅ tracking/location fields
+    lastLat?: number | null;
+    lastLng?: number | null;
+    lastPingAt?: Date | null;
+    batteryLevel?: number | null;
+    trackingStartedAt?: Date | null;
+    trackingStoppedAt?: Date | null;
+
+    // due date
     dueAt?: Date | null;
+
+    // audit timestamps
     createdAt?: Date;
     updatedAt?: Date;
     deletedAt?: Date | null;
@@ -71,19 +133,24 @@ export class CollectionModel extends Model<CollectionAttributes, CollectionCreat
     public amount!: number;
     public status!: CollectionStatus;
     public customerId!: string | null;
+    public customerName!: string | null; // ✅ added
     public assignedAgentId!: string | null;
     public dueAt!: Date | null;
+
+    public lastLat!: number | null;
+    public lastLng!: number | null;
+    public lastPingAt!: Date | null;
+    public batteryLevel!: number | null;
+    public trackingStartedAt!: Date | null;
+    public trackingStoppedAt!: Date | null;
 
     // timestamps
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
     public readonly deletedAt!: Date | null;
-
-    // If you use associations, you can add convenience fields here, e.g.
-    // public readonly assignedAgent?: AgentModel | null;
 }
 
-// ---- 3) Init / mapping (exactly your previous attributes) ----
+// ---- 3) Init / mapping (updated) ----
 CollectionModel.init(
     {
         id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
@@ -95,12 +162,19 @@ CollectionModel.init(
         city: DataTypes.STRING,
         amount: { type: DataTypes.INTEGER, allowNull: false },
         status: {
-            type: DataTypes.ENUM('pending','assigned','in_progress','completed','cancelled'),
+            type: DataTypes.ENUM('pending','assigned','in_progress','completed','cancelled', 'collected'),
             defaultValue: 'pending'
         },
         customerId: { type: DataTypes.UUID, allowNull: true },
+        customerName: { type: DataTypes.STRING, allowNull: true }, // ✅ added
         assignedAgentId: { type: DataTypes.UUID, allowNull: true },
         dueAt: { type: DataTypes.DATE, allowNull: true },
+        lastLat: { type: DataTypes.DOUBLE, allowNull: true },
+        lastLng: { type: DataTypes.DOUBLE, allowNull: true },
+        lastPingAt: { type: DataTypes.DATE, allowNull: true },
+        batteryLevel: { type: DataTypes.DOUBLE, allowNull: true },
+        trackingStartedAt: { type: DataTypes.DATE, allowNull: true },
+        trackingStoppedAt: { type: DataTypes.DATE, allowNull: true }
     },
     {
         sequelize,

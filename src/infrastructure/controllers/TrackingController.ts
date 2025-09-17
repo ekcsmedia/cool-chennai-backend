@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
-import { agentRepo, trackingRepo } from '../repositories/SequelizeRepositories';
+import {trackingRepo} from "../repositories/tracking.repository";
+import {agentRepo} from "../repositories/agent.repository";
 
 export async function trackingRoutes(app: FastifyInstance) {
     // Called from Agent app to push location

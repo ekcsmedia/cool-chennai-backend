@@ -48,15 +48,29 @@ export class CollectionController {
     }
 
     // List "today" / pending (GET /collections/today)
+// List "today" / pending (GET /collections/today)
     static async listToday(req: FastifyRequest, rep: FastifyReply) {
         try {
-            const rows = await collectionRepo.findPending();
+            // Derive agentId from authenticated user if present
+            const user = (req as any).user;
+            let agentId: string | undefined = undefined;
+            if (user && user.id) {
+                agentId = user.id; // authenticated agent id
+            } else {
+                // fallback to query param (dev only)
+                const q = req.query as any;
+                if (q?.agentId) agentId = q.agentId;
+            }
+
+            // Use collectionRepo.findPending with optional agentId filter
+            const rows = await collectionRepo.findPending({ agentId });
             return rep.send(rows);
         } catch (err: any) {
             req.log.error(err);
             return rep.code(500).send({ error: 'Failed to fetch pending collections', detail: err.message });
         }
     }
+
 
     // List all (GET /collections) — optional filters via query
     static async listAll(req: FastifyRequest, rep: FastifyReply) {
@@ -153,6 +167,102 @@ export class CollectionController {
 
             if (!updated) return rep.code(404).send({ message: 'Collection not found' });
             return rep.send({ message: 'Status updated', collection: updated });
+        } catch (err: any) {
+            req.log.error(err);
+            return rep.code(500).send({ message: err?.message ?? 'Server error' });
+        }
+    }
+
+    static async start(req: FastifyRequest, rep: FastifyReply) {
+        try {
+            const id = (req.params as any).id as string;
+            if (!id) return rep.code(400).send({ message: 'id required' });
+
+            const body = req.body as any;
+            const agentIdFromBody = body?.agentId as string | undefined;
+            const user = (req as any).user;
+            const agentId = user?.id ?? agentIdFromBody;
+
+            if (!agentId) return rep.code(400).send({ message: 'agentId required' });
+
+            // Security: if user is authenticated but agentId in body differs, reject
+            if (user?.id && agentIdFromBody && user.id !== agentIdFromBody) {
+                return rep.code(403).send({ message: 'Agent mismatch' });
+            }
+
+            const result = await collectionRepo.startTracking(id, agentId);
+
+            const startedAtIso =
+                result.startedAt instanceof Date
+                    ? result.startedAt.toISOString()
+                    : (typeof result.startedAt === 'string' ? result.startedAt : null);
+
+            return rep.send({ started: true, startedAt: startedAtIso, collection: result.collection });
+        } catch (err: any) {
+            req.log.error(err);
+            return rep.code(500).send({ message: err?.message ?? 'Server error' });
+        }
+    }
+
+    // POST /collections/:id/stop
+    static async stop(req: FastifyRequest, rep: FastifyReply) {
+        try {
+            const id = (req.params as any).id as string;
+            if (!id) return rep.code(400).send({ message: 'id required' });
+
+            const body = req.body as any;
+            const agentIdFromBody = body?.agentId as string | undefined;
+            const user = (req as any).user;
+            const agentId = user?.id ?? agentIdFromBody;
+
+            if (!agentId) return rep.code(400).send({ message: 'agentId required' });
+
+            if (user?.id && agentIdFromBody && user.id !== agentIdFromBody) {
+                return rep.code(403).send({ message: 'Agent mismatch' });
+            }
+
+            const lat = body?.lat as number | undefined;
+            const lng = body?.lng as number | undefined;
+            const batteryLevel = body?.batteryLevel as number | undefined;
+
+            const result = await collectionRepo.stopTracking(id, agentId, { lat, lng, batteryLevel });
+
+            const stoppedAtIso =
+                result.stoppedAt instanceof Date
+                    ? result.stoppedAt.toISOString()
+                    : (typeof result.stoppedAt === 'string' ? result.stoppedAt : null);
+
+            return rep.send({ stopped: true, stoppedAt: stoppedAtIso, collection: result.collection });
+        } catch (err: any) {
+            req.log.error(err);
+            return rep.code(500).send({ message: err?.message ?? 'Server error' });
+        }
+    }
+
+    // POST /collections/:id/ping
+    static async ping(req: FastifyRequest, rep: FastifyReply) {
+        try {
+            const id = (req.params as any).id as string;
+            if (!id) return rep.code(400).send({ message: 'id required' });
+
+            const body = req.body as any;
+            const user = (req as any).user;
+            const agentId = user?.id ?? body?.agentId;
+            if (!agentId) return rep.code(400).send({ message: 'agentId required' });
+
+            // Accept arbitrary payload but store important known fields if present
+            const lat = body?.lat as number | undefined;
+            const lng = body?.lng as number | undefined;
+            const batteryLevel = body?.batteryLevel as number | undefined;
+            const ts = body?.ts ? new Date(body.ts) : new Date();
+
+            const ping = await collectionRepo.savePing(id, agentId, {
+                lat, lng, batteryLevel, ts, raw: body
+            });
+
+            // Optionally: publish to websocket / push notifications here
+
+            return rep.code(201).send({ ok: true, receivedAt: ping.createdAt.toISOString(), pingId: ping.id });
         } catch (err: any) {
             req.log.error(err);
             return rep.code(500).send({ message: err?.message ?? 'Server error' });

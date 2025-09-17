@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
-import { agentRepo, collectionRepo, trackingRepo } from '../repositories/SequelizeRepositories';
+import collectionRepo from "../repositories/SequelizeRepositories";
+import {agentRepo} from "../repositories/agent.repository";
 
 export async function dashboardRoutes(app: FastifyInstance) {
     app.get('/dashboard/summary', async () => {

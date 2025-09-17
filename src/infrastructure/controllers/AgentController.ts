@@ -9,8 +9,18 @@ export class AgentController {
     }
 
     static async list(req: FastifyRequest, rep: FastifyReply) {
-        const agents = await agentRepo.getAgents();
-        return rep.send(agents);
+        const repos = await import('../repositories/SequelizeRepositories');
+        const { agentRepo } = repos;
+
+        if (!agentRepo) return rep.code(500).send({ message: 'agentRepo not available' });
+
+        try {
+            const agents = await agentRepo.getAgents();
+            return rep.send(agents);
+        } catch (err: any) {
+            req.log.error(err);
+            return rep.code(500).send({ message: 'Failed', detail: err.message ?? String(err) });
+        }
     }
 
     static async get(req: FastifyRequest, rep: FastifyReply) {

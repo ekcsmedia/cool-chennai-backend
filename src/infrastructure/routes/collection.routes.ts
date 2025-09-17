@@ -17,4 +17,10 @@ export default async function collectionRoutes(fastify: FastifyInstance) {
     // --- Reminders ---
     fastify.post("/collections/reminders", CollectionController.addReminder);
     fastify.get("/collections/:id/reminders", CollectionController.listReminders);
+
+    // new tracking endpoints
+    fastify.post("/collections/:id/start", CollectionController.start); // start tracking
+    fastify.post("/collections/:id/stop", CollectionController.stop);   // stop tracking
+    fastify.post("/collections/:id/ping", CollectionController.ping);   // heartbeat / location ping
+
 }

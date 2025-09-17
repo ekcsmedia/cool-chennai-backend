@@ -1,8 +1,8 @@
 // src/infrastructure/controllers/NotificationController.ts
 import { FastifyReply, FastifyRequest } from "fastify";
-import { notificationRepo } from "../repositories/SequelizeRepositories";
 import { deviceTokenRepo } from "../repositories/deviceToken.repository"; // you must have this
 import { sendPushToTokens } from "../push/fcm";
+import {notificationRepo} from "../repositories/notification_repository";
 
 export const NotificationController = {
     /**

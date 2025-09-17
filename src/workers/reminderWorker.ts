@@ -1,9 +1,9 @@
 // src/workers/reminderWorker.ts
 import cron from "node-cron";
 import { ReminderRepository } from "../infrastructure/repositories/reminder.repository";
-import { notificationRepo } from "../infrastructure/repositories/SequelizeRepositories";
 import { deviceTokenRepo } from "../infrastructure/repositories/deviceToken.repository";
 import { sendPushToTokens } from "../infrastructure/push/fcm";
+import {notificationRepo} from "../infrastructure/repositories/notification_repository";
 
 // instantiate repository (was missing)
 const reminderRepo = new ReminderRepository();
