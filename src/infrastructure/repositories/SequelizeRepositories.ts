@@ -1,21 +1,40 @@
 // repositories/collection.repository.ts
 import { Transaction } from 'sequelize';
-import {AgentModel, AssignmentModel, CollectionModel} from "../models";
+import {AgentModel, AssignmentModel, CollectionModel, CollectionStatus} from "../models";
 import sequelize from "../sequelize";
-import {CollectionPingModel} from "../models/collection_ping_model";
+import { CollectionPingModel } from "../models/collection_ping_model";
+import {CustomerModel} from "../models/customers.model";
+
 export { agentRepo } from './agent.repository';
 export { deviceTokenRepo } from './deviceToken.repository';
 export { historyRepo } from './history.repository';
 export { trackingRepo } from './tracking.repository';
 
-// Ensure this object implements your CollectionRepository interface
+// Helper: map to plain JSON and attach convenient customerName if available
+function mapCollectionRow(row: any) {
+    const json = row && typeof row.toJSON === 'function' ? row.toJSON() : row;
+    if (json.customer) {
+        json.customerName = json.customer.name ?? json.customerName ?? null;
+        json.customerPhone = json.customer.phone ?? null;
+        json.customerArea = json.customer.area ?? null;
+    }
+    // ensure top-level customerName exists (some legacy code expects this)
+    if (!json.customerName && json.customerId && json.customerName === undefined) {
+        // leave null or empty
+        json.customerName = null;
+    }
+    return json;
+}
+
 export const collectionRepo = {
     async create(payload: {
         code?: string;
         title: string;
         address: string;
+        customerName : string;
+        status? :  CollectionStatus;
         amount: number;
-        type?: 'pickup' | 'delivery' | 'service';
+        type?: 'pickup' | 'delivery' | 'service' | 'collection';
         area?: string | null;
         city?: string | null;
         customerId?: string | null;
@@ -28,22 +47,20 @@ export const collectionRepo = {
 
         const t: Transaction = await sequelize.transaction();
         try {
-            const row = await CollectionModel.create(
-                {
-                    code: payload.code ?? '',
-                    title: payload.title,
-                    address: payload.address,
-                    amount: payload.amount,
-                    type: payload.type ?? 'pickup',
-                    area: payload.area ?? null,
-                    city: payload.city ?? null,
-                    customerId: payload.customerId ?? null,
-                    assignedAgentId: payload.assignedAgentId ?? null,
-                    dueAt: payload.dueAt ?? null,
-                    status: 'pending',
-                },
-                { transaction: t }
-            );
+            const row = await CollectionModel.create({
+                code: payload.code ?? '',
+                title: payload.title,
+                address: payload.address,
+                amount: payload.amount,
+                type: payload.type ?? 'collection',
+                area: payload.area ?? null,
+                city: payload.city ?? null,
+                customerId: payload.customerId ?? null,
+                customerName: payload.customerName ?? null,
+                assignedAgentId: payload.assignedAgentId ?? null,
+                dueAt: payload.dueAt ?? null,
+                status: payload.status ?? 'pending',
+            }, { transaction: t });
 
             if (payload.assignedAgentId) {
                 const agentExists = await AgentModel.findByPk(payload.assignedAgentId, { transaction: t });
@@ -64,10 +81,13 @@ export const collectionRepo = {
             await t.commit();
 
             const created = await CollectionModel.findByPk(row.id, {
-                include: [{ model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] }],
+                include: [
+                    { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
+                    { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                ],
             });
 
-            return created ? (created.toJSON() as any) : (row.toJSON() as any);
+            return created ? mapCollectionRow(created) : mapCollectionRow(row);
         } catch (err) {
             try {
                 await t.rollback();
@@ -86,9 +106,8 @@ export const collectionRepo = {
     },
 
     async findPending(opts?: { agentId?: string }) {
-        const where: any = { status: ['pending', 'in_progress']};
+        const where: any = { status: ['pending', 'in_progress'] };
 
-        // If agentId is passed, only return collections assigned to that agent
         if (opts?.agentId) {
             where.assignedAgentId = opts.agentId;
         }
@@ -98,10 +117,11 @@ export const collectionRepo = {
             order: [['createdAt', 'DESC']],
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
             ],
         });
 
-        return rows.map((r) => r.toJSON() as any);
+        return rows.map((r) => mapCollectionRow(r));
     },
 
     async findAll(opts?: { filters?: any; page?: number; limit?: number }) {
@@ -120,17 +140,23 @@ export const collectionRepo = {
             order: [['createdAt', 'DESC']],
             limit,
             offset,
-            include: [{ model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] }],
+            include: [
+                { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+            ],
         });
 
-        return { items: rows.map((r) => r.toJSON() as any), total: count, page, limit };
+        return { items: rows.map((r) => mapCollectionRow(r)), total: count, page, limit };
     },
 
     async findById(id: string) {
         const row = await CollectionModel.findByPk(id, {
-            include: [{ model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] }],
+            include: [
+                { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+            ],
         });
-        return row ? (row.toJSON() as any) : null;
+        return row ? mapCollectionRow(row) : null;
     },
 
     async assign(collectionId: string, agentId: string) {
@@ -158,12 +184,15 @@ export const collectionRepo = {
             await t.commit();
 
             const updatedRow = await CollectionModel.findByPk(collectionId, {
-                include: [{ model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] }],
+                include: [
+                    { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
+                    { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                ],
             });
 
             return {
                 assignment: assignment.toJSON() as any,
-                collection: updatedRow ? (updatedRow.toJSON() as any) : null,
+                collection: updatedRow ? mapCollectionRow(updatedRow) : null,
             };
         } catch (err) {
             try {
@@ -176,11 +205,15 @@ export const collectionRepo = {
     },
 
     async update(collectionId: string, data: any) {
+        // data MAY include customerId & customerName as prepared by controller
         await CollectionModel.update(data, { where: { id: collectionId } });
         const row = await CollectionModel.findByPk(collectionId, {
-            include: [{ model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] }],
+            include: [
+                { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+            ],
         });
-        return row ? (row.toJSON() as any) : null;
+        return row ? mapCollectionRow(row) : null;
     },
 
     async updateStatus(collectionId: string, status: string, extra?: any) {
@@ -192,9 +225,12 @@ export const collectionRepo = {
 
         await CollectionModel.update(payload, { where: { id: collectionId } });
         const row = await CollectionModel.findByPk(collectionId, {
-            include: [{ model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] }],
+            include: [
+                { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+            ],
         });
-        return row ? (row.toJSON() as any) : null;
+        return row ? mapCollectionRow(row) : null;
     },
 
     async startTracking(
@@ -216,7 +252,10 @@ export const collectionRepo = {
         await col.save(txOptions);
 
         const collectionPlain = (await CollectionModel.findByPk(collectionId, {
-            include: [{ model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] }],
+            include: [
+                { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+            ],
         }))?.toJSON() as any;
 
         return { startedAt: (col as any).trackingStartedAt?.toISOString?.() ?? new Date().toISOString(), collection: collectionPlain ?? (col.toJSON() as any) };
@@ -245,7 +284,10 @@ export const collectionRepo = {
         await col.save(txOptions);
 
         const collectionPlain = (await CollectionModel.findByPk(collectionId, {
-            include: [{ model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] }],
+            include: [
+                { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+            ],
         }))?.toJSON() as any;
 
         return { stoppedAt: (col as any).trackingStoppedAt?.toISOString?.() ?? new Date().toISOString(), collection: collectionPlain ?? (col.toJSON() as any) };
@@ -291,9 +333,12 @@ export const collectionRepo = {
 
         await CollectionModel.update(payload, { where: { id: collectionId } });
         const row = await CollectionModel.findByPk(collectionId, {
-            include: [{ model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] }],
+            include: [
+                { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+            ],
         });
-        return row ? (row.toJSON() as any) : null;
+        return row ? mapCollectionRow(row) : null;
     },
 
     async markDelivered(collectionId: string, notes?: string, proofUrl?: string) {
@@ -306,9 +351,12 @@ export const collectionRepo = {
 
         await CollectionModel.update(payload, { where: { id: collectionId } });
         const row = await CollectionModel.findByPk(collectionId, {
-            include: [{ model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] }],
+            include: [
+                { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+            ],
         });
-        return row ? (row.toJSON() as any) : null;
+        return row ? mapCollectionRow(row) : null;
     },
 
     async delete(collectionId: string) {

@@ -1,26 +1,23 @@
-// src/infrastructure/models/collectionPing.model.ts
-import { Model, DataTypes, Optional, ModelAttributes } from 'sequelize';
+import {DataTypes, Model, Optional} from "sequelize";
 import sequelize from "../sequelize";
 
-export interface CollectionPingAttributes {
+interface CollectionPingAttributes {
     id: string;
     collectionId: string;
-    agentId?: string | null;
-    lat?: number | null;
-    lng?: number | null;
+    agentId: string | null;
+    lat: number | null;
+    lng: number | null;
     batteryLevel?: number | null;
-    ts: Date;                 // client timestamp (or server fallback)
-    recordedAt?: Date | null; // server-side recorded timestamp
-    raw?: any | null;
+    ts?: Date | null;
+    raw?: any;
     createdAt?: Date;
     updatedAt?: Date;
+    recordedAt?: Date | null;
 }
 
-export interface CollectionPingCreationAttributes
-    extends Optional<CollectionPingAttributes, 'id' | 'raw' | 'createdAt' | 'updatedAt' | 'recordedAt'> {}
+type CollectionPingCreation = Optional<CollectionPingAttributes, 'id' | 'agentId' | 'lat' | 'lng' | 'batteryLevel' | 'ts' | 'raw' | 'createdAt' | 'updatedAt' | 'recordedAt'>;
 
-export class CollectionPingModel
-    extends Model<CollectionPingAttributes, CollectionPingCreationAttributes>
+export class CollectionPingModel extends Model<CollectionPingAttributes, CollectionPingCreation>
     implements CollectionPingAttributes {
     public id!: string;
     public collectionId!: string;
@@ -28,32 +25,38 @@ export class CollectionPingModel
     public lat!: number | null;
     public lng!: number | null;
     public batteryLevel!: number | null;
-    public ts!: Date;
-    public recordedAt!: Date | null;
-    public raw!: any | null;
+    public ts!: Date | null;
+    public raw!: any;
 
-    // timestamps
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
+    public readonly recordedAt!: Date | null;
 }
 
-// --- explicitly typed attributes object to satisfy TS ---
-const attributes: ModelAttributes<CollectionPingModel, CollectionPingAttributes> = {
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    collectionId: { type: DataTypes.UUID, allowNull: false },
-    agentId: { type: DataTypes.UUID, allowNull: true },
-    lat: { type: DataTypes.DOUBLE, allowNull: true },
-    lng: { type: DataTypes.DOUBLE, allowNull: true },
-    batteryLevel: { type: DataTypes.DOUBLE, allowNull: true },
-    ts: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
-    // server-side recorded timestamp (column will be recorded_at because underscored: true)
-    recordedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
-    raw: { type: DataTypes.JSON, allowNull: true },
-};
+CollectionPingModel.init(
+    {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
+        collectionId: { type: DataTypes.UUID, allowNull: false },
+        agentId: { type: DataTypes.UUID, allowNull: true },
+        lat: { type: DataTypes.DOUBLE, allowNull: true },
+        lng: { type: DataTypes.DOUBLE, allowNull: true },
+        batteryLevel: { type: DataTypes.DOUBLE, allowNull: true },
+        ts: { type: DataTypes.DATE, allowNull: true },
+        raw: { type: DataTypes.JSON, allowNull: true },
+        // optional recorded_at can be mapped to createdAt or kept as separate field if desired
+        recordedAt: { type: DataTypes.DATE, allowNull: true },
+    },
+    {
+        sequelize,
+        tableName: 'collection_pings',
+        timestamps: true, // createdAt & updatedAt
+        underscored: false,
+    }
+);
 
-CollectionPingModel.init(attributes, {
-    sequelize,
-    tableName: 'collection_pings',
-    timestamps: true,
-    underscored: true,
-});
+// Export default if you prefer default import style
+export default CollectionPingModel;

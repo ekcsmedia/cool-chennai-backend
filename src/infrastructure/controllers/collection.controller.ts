@@ -2,11 +2,50 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { ReminderRepository } from "../repositories/reminder.repository";
 import { collectionRepo } from "../repositories/SequelizeRepositories";
 import { v4 as uuidv4 } from 'uuid';
+import {CollectionPingModel} from "../models/collection_ping_model";
+import {AgentModel} from "../models";
 
 const reminderRepo = new ReminderRepository();
 
 export class CollectionController {
-    // Create (POST /collections)
+
+
+static async listPings(req: FastifyRequest<{ Params: { id: string } }>, rep: FastifyReply) {
+    try {
+        const collectionId = (req.params as any).id as string;
+        if (!collectionId) return rep.code(400).send({ message: "collection id required" });
+
+        const rows = await CollectionPingModel.findAll({
+            where: { collectionId },
+            order: [["ts", "ASC"]],
+            include: [{ model: AgentModel, as: "agent", attributes: ["id", "name", "phone"] }],
+        });
+
+        // Map to plain JSON (optionally add formatting)
+        const data = rows.map((r) => {
+            const j = r.toJSON() as any;
+            // normalize keys
+            return {
+                id: j.id,
+                collectionId: j.collectionId,
+                agentId: j.agentId,
+                lat: j.lat,
+                lng: j.lng,
+                batteryLevel: j.batteryLevel,
+                ts: j.ts ?? j.recordedAt ?? j.createdAt,
+                raw: j.raw ?? null,
+                agent: j.agent ?? null,
+            };
+        });
+
+        return rep.send({ items: data });
+    } catch (err: any) {
+        req.log?.error(err);
+        return rep.code(500).send({ error: "Failed to fetch pings", detail: err?.message ?? String(err) });
+    }
+}
+
+// Create (POST /collections)
     static async create(req: FastifyRequest, rep: FastifyReply) {
         try {
             const body = req.body as any;
@@ -19,7 +58,7 @@ export class CollectionController {
                 return rep.code(400).send({ error: "title, address and amount are required" });
             }
 
-            if (type && !['pickup','delivery','service'].includes(type)) {
+            if (type && !['collection','pickup','delivery','service'].includes(type)) {
                 return rep.code(400).send({ error: "invalid type" });
             }
 
@@ -30,7 +69,7 @@ export class CollectionController {
                 title,
                 address,
                 amount: Number(amount),
-                type: type ?? 'pickup',
+                type: type ?? 'collection',
                 area: area ?? null,
                 city: city ?? null,
                 customerId: customerId ?? null,

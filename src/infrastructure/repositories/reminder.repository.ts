@@ -1,7 +1,8 @@
+// src/infrastructure/repositories/reminder.repository.ts
 import { IReminderRepository } from "../../core/interfaces/IReminderRepository";
 import { Reminder } from "../../core/entities/Reminder";
-import {Op} from "sequelize";
-import {ReminderModel} from "../models/reminder.model";
+import { Op } from "sequelize";
+import { ReminderModel } from "../models/reminder.model";
 
 export class ReminderRepository implements IReminderRepository {
     async create(rem: Partial<Reminder>): Promise<Reminder> {
@@ -31,8 +32,11 @@ export class ReminderRepository implements IReminderRepository {
         return rows.map(r => r.toJSON() as Reminder);
     }
 
-
     async cancel(id: string) {
         await ReminderModel.update({ status: "cancelled" }, { where: { id } });
     }
 }
+
+// Named instance export that your routes import expects:
+export const reminderRepo = new ReminderRepository();
+

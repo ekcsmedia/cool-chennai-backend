@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { CollectionController } from "../controllers/collection.controller";
+import {GeocodeController} from "../controllers/geo_location_controller";
 
 export default async function collectionRoutes(fastify: FastifyInstance) {
     // --- CRUD ---
@@ -23,4 +24,6 @@ export default async function collectionRoutes(fastify: FastifyInstance) {
     fastify.post("/collections/:id/stop", CollectionController.stop);   // stop tracking
     fastify.post("/collections/:id/ping", CollectionController.ping);   // heartbeat / location ping
 
+    fastify.get("/collections/:id/pings", CollectionController.listPings);
+    fastify.get("/geocode/reverse", GeocodeController.reverse);
 }

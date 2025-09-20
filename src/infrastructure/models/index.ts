@@ -1,5 +1,7 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from "../sequelize";
+import {CustomerModel} from "./customers.model";
+import CollectionPingModel from "./collection_ping_model";
 
 export class AgentModel extends Model {}
 AgentModel.init({
@@ -70,17 +72,9 @@ DeviceTokenModel.init(
     { sequelize, tableName: "device_tokens", timestamps: true }
 );
 
-export class CustomerModel extends Model {}
-CustomerModel.init({
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    name: { type: DataTypes.STRING, allowNull: false },
-    phone: DataTypes.STRING,
-    area: DataTypes.STRING,
-}, { sequelize, tableName: 'customers', timestamps: true, paranoid: true });
-
 // src/models/collection.model.ts  (adjust path if needed)
 // ---- 1) Attribute interfaces ----
-export type CollectionType = 'pickup' | 'delivery' | 'service';
+export type CollectionType = 'pickup' | 'delivery' | 'service' | 'collection';
 export type CollectionStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'collected';
 
 export interface CollectionAttributes {
@@ -157,7 +151,7 @@ CollectionModel.init(
         code: { type: DataTypes.STRING, allowNull: false, unique: true },
         title: { type: DataTypes.STRING, allowNull: false, unique: false },
         address: { type: DataTypes.STRING, allowNull: false, unique: false },
-        type: { type: DataTypes.ENUM('pickup', 'delivery', 'service'), allowNull: false },
+        type: { type: DataTypes.ENUM('pickup', 'delivery', 'service', 'collection'), allowNull: false },
         area: DataTypes.STRING,
         city: DataTypes.STRING,
         amount: { type: DataTypes.INTEGER, allowNull: false },
@@ -231,7 +225,6 @@ TripHistoryModel.init({
 }, { sequelize, tableName: 'trip_history', timestamps: false });
 
 // Associations (optional minimal)
-CollectionModel.belongsTo(CustomerModel, { foreignKey: 'customerId' });
 CollectionModel.belongsTo(AgentModel, { foreignKey: 'assignedAgentId', as: 'assignedAgent' });
 AssignmentModel.belongsTo(CollectionModel, { foreignKey: 'collectionId' });
 AssignmentModel.belongsTo(AgentModel, { foreignKey: 'agentId' });
@@ -241,3 +234,8 @@ TripHistoryModel.belongsTo(CollectionModel, { foreignKey: 'collectionId', as: 'c
 TripHistoryModel.belongsTo(AgentModel, { foreignKey: 'agentId', as: 'agent' });
 CollectionModel.belongsTo(CustomerModel, { foreignKey: 'customerId', as: 'customer' });
 AgentModel.hasMany(TripHistoryModel, { foreignKey: 'agentId', as: 'trips' });
+CollectionPingModel.belongsTo(AgentModel, { foreignKey: 'agentId', as: 'agent' });
+AgentModel.hasMany(CollectionPingModel, { foreignKey: 'agentId', as: 'pings' });
+
+CollectionPingModel.belongsTo(CollectionModel, { foreignKey: "collectionId", as: "collection" });
+CollectionModel.hasMany(CollectionPingModel, { foreignKey: "collectionId", as: "pings" });
