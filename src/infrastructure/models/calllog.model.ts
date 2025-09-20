@@ -1,21 +1,20 @@
 // src/models/calllog.model.ts
 import { DataTypes, Model, Optional } from "sequelize";
-import sequelize from "../sequelize";
-import { TelecallerModel } from "./telecaller.model";
-import {CustomerModel} from "./customers.model";
+import sequelize from "../sequelize"; // adjust to your sequelize instance path
 
 export interface CallLogAttributes {
     id: string;
-    telecallerId: string;
+    telecallerId: string | null;
     telecallerName?: string | null;
-    customerId: string;
+    customerId?: string | null;
     customerName?: string | null;
-    phoneNumber: string;
-    startTime: Date;
+    phoneNumber?: string | null;
+    startTime?: Date | null;
     endTime?: Date | null;
     durationSeconds?: number | null;
+    callType?: string | null; // INCOMING / OUTGOING / MISSED etc
     notes?: string | null;
-
+    callId?: string | null;
     createdAt?: Date;
     updatedAt?: Date;
     deletedAt?: Date | null;
@@ -23,23 +22,36 @@ export interface CallLogAttributes {
 
 export type CallLogCreationAttributes = Optional<
     CallLogAttributes,
-    "id" | "telecallerName" | "customerName" | "endTime" | "durationSeconds" | "notes" | "createdAt" | "updatedAt" | "deletedAt"
+    | "id"
+    | "telecallerId"
+    | "telecallerName"
+    | "customerId"
+    | "customerName"
+    | "phoneNumber"
+    | "startTime"
+    | "endTime"
+    | "durationSeconds"
+    | "callType"
+    | "notes"
+    | "createdAt"
+    | "updatedAt"
+    | "deletedAt"
 >;
 
-export class CallLogModel
-    extends Model<CallLogAttributes, CallLogCreationAttributes>
+export class CallLogModel extends Model<CallLogAttributes, CallLogCreationAttributes>
     implements CallLogAttributes {
     public id!: string;
-    public telecallerId!: string;
-    public telecallerName?: string | null;
-    public customerId!: string;
-    public customerName?: string | null;
-    public phoneNumber!: string;
-    public startTime!: Date;
-    public endTime?: Date | null;
-    public durationSeconds?: number | null;
-    public notes?: string | null;
-
+    public telecallerId!: string | null;
+    public telecallerName!: string | null;
+    public customerId!: string | null;
+    public customerName!: string | null;
+    public phoneNumber!: string | null;
+    public startTime!: Date | null;
+    public endTime!: Date | null;
+    public durationSeconds!: number | null;
+    public callType!: string | null;
+    public notes!: string | null;
+    public callId!: string | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
     public readonly deletedAt!: Date | null;
@@ -54,7 +66,7 @@ CallLogModel.init(
         },
         telecallerId: {
             type: DataTypes.UUID,
-            allowNull: false,
+            allowNull: true,
         },
         telecallerName: {
             type: DataTypes.STRING,
@@ -62,7 +74,7 @@ CallLogModel.init(
         },
         customerId: {
             type: DataTypes.UUID,
-            allowNull: false,
+            allowNull: true,
         },
         customerName: {
             type: DataTypes.STRING,
@@ -70,11 +82,11 @@ CallLogModel.init(
         },
         phoneNumber: {
             type: DataTypes.STRING,
-            allowNull: false,
+            allowNull: true,
         },
         startTime: {
             type: DataTypes.DATE,
-            allowNull: false,
+            allowNull: true,
         },
         endTime: {
             type: DataTypes.DATE,
@@ -82,6 +94,14 @@ CallLogModel.init(
         },
         durationSeconds: {
             type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        callType: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        callId: {
+            type: DataTypes.STRING,
             allowNull: true,
         },
         notes: {
@@ -97,8 +117,4 @@ CallLogModel.init(
     }
 );
 
-// Associations
-TelecallerModel.hasMany(CallLogModel, { foreignKey: "telecallerId" });
-CustomerModel.hasMany(CallLogModel, { foreignKey: "customerId" });
-CallLogModel.belongsTo(TelecallerModel, { foreignKey: "telecallerId" });
-CallLogModel.belongsTo(CustomerModel, { foreignKey: "customerId" });
+export default CallLogModel;
