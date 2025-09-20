@@ -3,6 +3,7 @@ import * as CallRepo from '../repositories/calllog.repo';
 import { CallAssignmentModel } from '../models/callAssignment.model'; // ✅ updated
 import { TelecallerModel } from '../models/telecaller.model';
 import {CustomerModel} from "../models/customers.model";         // ✅ updated naming
+import bcrypt from 'bcrypt';
 
 export const registerTelecallRoutes = (fastify: FastifyInstance) => {
     // Telecaller login
@@ -60,5 +61,46 @@ export const registerTelecallRoutes = (fastify: FastifyInstance) => {
     fastify.get('/telecall/logs', async (_req, reply) => {
         const logs = await CallRepo.getCallLogs();
         reply.send(logs);
+    });
+
+    fastify.post('/telecallers', async (req, reply) => {
+        try {
+            const { name, email, password } = req.body as any;
+            if (!name || !email || !password) {
+                return reply.code(400).send({ error: 'name, email and password are required' });
+            }
+
+            // check duplicate email
+            const existing = await TelecallerModel.findOne({ where: { email } });
+            if (existing) return reply.code(409).send({ error: 'email already in use' });
+
+            // hash password
+            const passwordHash = await bcrypt.hash(password, 10);
+
+            const created = await TelecallerModel.create({
+                name,
+                email,
+                passwordHash,
+            });
+
+            // remove sensitive field before sending
+            const { id, createdAt, updatedAt } = created;
+            return reply.code(201).send({ id, name: created.name, email: created.email, createdAt, updatedAt });
+        } catch (err) {
+            fastify.log.error(err);
+            return reply.code(500).send({ error: 'internal server error' });
+        }
+    });
+    // ✅ Get all telecallers (without passwordHash)
+    fastify.get('/telecallers', async (_req, reply) => {
+        try {
+            const telecallers = await TelecallerModel.findAll({
+                attributes: ['id', 'name', 'email', 'createdAt', 'updatedAt'], // exclude passwordHash
+            });
+            return reply.send(telecallers);
+        } catch (err) {
+            fastify.log.error(err);
+            return reply.code(500).send({ error: 'internal server error' });
+        }
     });
 };

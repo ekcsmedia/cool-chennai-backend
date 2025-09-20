@@ -44,12 +44,12 @@ export function startReminderWorker(cronSpec = "*/1 * * * *") {
 
                     // send push if notifyVia includes push and target agent exists
                     if ((r.notifyVia === "push" || r.notifyVia === "both") && r.agentId) {
-                        // deviceTokenRepo.getTokensForAgents should return string[] tokens
                         const tokens = await deviceTokenRepo.getTokensForAgents([String(r.agentId)]);
-                        // normalize: if it returns objects, map to token field
-                        const tokenList = tokens.length && typeof tokens[0] === "object"
-                            ? (tokens as any[]).map((t) => t.token).filter(Boolean)
-                            : (tokens as string[]);
+
+                        // Always normalize to string[]
+                        const tokenList: string[] = tokens.map((t: any) =>
+                            typeof t === "string" ? t : t.token
+                        ).filter(Boolean);
 
                         if (tokenList.length) {
                             // FCM sendMulticast supports up to 500 tokens; chunk if needed
