@@ -4,6 +4,7 @@ import { CallAssignmentModel } from '../models/callAssignment.model'; // ✅ upd
 import { TelecallerModel } from '../models/telecaller.model';
 import {CustomerModel} from "../models/customers.model";         // ✅ updated naming
 import bcrypt from 'bcrypt';
+import {getCallLogsFiltered} from "../repositories/calllog.repo";
 
 export const registerTelecallRoutes = (fastify: FastifyInstance) => {
     // Telecaller login
@@ -61,6 +62,29 @@ export const registerTelecallRoutes = (fastify: FastifyInstance) => {
     fastify.get('/telecall/logs', async (_req, reply) => {
         const logs = await CallRepo.getCallLogs();
         reply.send(logs);
+    });
+
+    fastify.get("/calllogs", async (request, reply) => {
+            try {
+                const q: any = request.query || {};
+                const limit = q.limit ? parseInt(q.limit, 10) : undefined;
+                const offset = q.offset ? parseInt(q.offset, 10) : undefined;
+
+                const filters = {
+                    telecallerId: q.telecallerId,
+                    date: q.date,
+                    from: q.from,
+                    to: q.to,
+                    limit,
+                    offset,
+                };
+
+                const logs = await getCallLogsFiltered(filters);
+                return reply.send(logs);
+            } catch (err) {
+                request.log.error(err);
+                return reply.status(500).send({ error: "Failed to fetch call logs" });
+            }
     });
 
     fastify.post('/telecallers', async (req, reply) => {
