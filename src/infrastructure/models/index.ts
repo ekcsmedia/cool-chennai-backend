@@ -3,7 +3,39 @@ import sequelize from "../sequelize";
 import {CustomerModel} from "./customers.model";
 import CollectionPingModel from "./collection_ping_model";
 
-export class AgentModel extends Model {}
+// 1) Agent attributes
+export interface AgentAttributes {
+    id: string;
+    name: string;
+    phone?: string | null;
+    isActive?: boolean;
+    status?: 'on_duty' | 'idle' | 'off_duty';
+    lastSeenAt?: Date | null;
+    password: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+    deletedAt?: Date | null;
+}
+
+// 2) Agent creation attrs (id auto-generated)
+export type AgentCreationAttributes = Optional<AgentAttributes, 'id' | 'phone' | 'isActive' | 'status' | 'lastSeenAt' | 'createdAt' | 'updatedAt' | 'deletedAt'>;
+
+// 3) Model class
+export class AgentModel extends Model<AgentAttributes, AgentCreationAttributes> implements AgentAttributes {
+    public id!: string;
+    public name!: string;
+    public phone!: string | null;
+    public isActive!: boolean;
+    public status!: 'on_duty' | 'idle' | 'off_duty';
+    public lastSeenAt!: Date | null;
+    public password!: string;
+
+    // timestamps
+    public readonly createdAt!: Date;
+    public readonly updatedAt!: Date;
+    public readonly deletedAt!: Date | null;
+}
+
 AgentModel.init({
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     name: { type: DataTypes.STRING, allowNull: false },
@@ -13,6 +45,7 @@ AgentModel.init({
     lastSeenAt: DataTypes.DATE,
     password: { type: DataTypes.STRING, allowNull: false },
 }, { sequelize, tableName: 'agents', timestamps: true, paranoid: true });
+
 
 interface DeviceTokenAttributes {
     id: string;
@@ -74,6 +107,7 @@ DeviceTokenModel.init(
 
 // src/models/collection.model.ts  (adjust path if needed)
 // ---- 1) Attribute interfaces ----
+// ---- 1) Attribute interfaces ----
 export type CollectionType = 'pickup' | 'delivery' | 'service' | 'collection';
 export type CollectionStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'collected';
 
@@ -82,7 +116,8 @@ export interface CollectionAttributes {
     code: string;
     title: string;
     address: string;
-    customerName?: string | null; // ✅ added
+    pincode?: string | null;              // <-- added
+    customerName?: string | null;
     type: CollectionType;
     area?: string | null;
     city?: string | null;
@@ -91,7 +126,7 @@ export interface CollectionAttributes {
     customerId?: string | null;
     assignedAgentId?: string | null;
 
-    // ✅ tracking/location fields
+    // tracking/location fields
     lastLat?: number | null;
     lastLng?: number | null;
     lastPingAt?: Date | null;
@@ -118,16 +153,17 @@ export type CollectionCreationAttributes = Optional<
 export class CollectionModel extends Model<CollectionAttributes, CollectionCreationAttributes>
     implements CollectionAttributes {
     public id!: string;
+    public code!: string;
     public title!: string;
     public address!: string;
-    public code!: string;
+    public pincode!: string | null;        // <-- added
     public type!: CollectionType;
     public area!: string | null;
     public city!: string | null;
     public amount!: number;
     public status!: CollectionStatus;
     public customerId!: string | null;
-    public customerName!: string | null; // ✅ added
+    public customerName!: string | null;
     public assignedAgentId!: string | null;
     public dueAt!: Date | null;
 
