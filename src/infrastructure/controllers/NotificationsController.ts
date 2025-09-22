@@ -35,17 +35,17 @@ export const NotificationController = {
                 );
             }
 
-            // If role is admin → send to all admin devices
-            if (body.actorRole === "admin") {
-                const adminTokens = await deviceTokenRepo.getTokensByRole("admin");
-                tokens = [...tokens, ...adminTokens.map((t) => t.token)];
-            }
-
-            // If role is agent → send to all agent devices
-            if (body.actorRole === "agent" && !body.meta?.targetAgentId) {
-                const agentTokens = await deviceTokenRepo.getTokensByRole("agent");
-                tokens = [...tokens, ...agentTokens.map((t) => t.token)];
-            }
+            // // If role is admin → send to all admin devices
+            // if (body.actorRole === "admin") {
+            //     const adminTokens = await deviceTokenRepo.getTokensByRole("admin");
+            //     tokens = [...tokens, ...adminTokens.map((t) => t.token)];
+            // }
+            //
+            // // If role is agent → send to all agent devices
+            // if (body.actorRole === "agent" && !body.meta?.targetAgentId) {
+            //     const agentTokens = await deviceTokenRepo.getTokensByRole("agent");
+            //     tokens = [...tokens, ...agentTokens.map((t) => t.token)];
+            // }
 
             // Send push if any tokens
             if (tokens.length) {
