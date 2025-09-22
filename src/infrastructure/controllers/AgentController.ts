@@ -3,8 +3,8 @@ import {agentRepo} from "../repositories/SequelizeRepositories";
 
 export class AgentController {
     static async create(req: FastifyRequest, rep: FastifyReply) {
-        const { name, email, password } = req.body as any;
-        const agent = await agentRepo.createAgent(name, email, password);
+        const { name, email, password, phone } = req.body as any;
+        const agent = await agentRepo.createAgent(name, email, password, phone);
         return rep.send(agent);
     }
 

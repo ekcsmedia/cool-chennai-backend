@@ -9,34 +9,6 @@ import { getCallLogsFiltered } from '../repositories/calllog.repo';
 export const registerTelecallRoutes = (fastify: FastifyInstance) => {
 
     // -------------------------
-    // Telecaller login (with bcrypt check)
-    // -------------------------
-    fastify.post('/telecaller/login', async (req, reply) => {
-        try {
-            const { email, password } = req.body as any;
-            if (!email || !password) return reply.code(400).send({ error: 'email and password required' });
-
-            const user = await TelecallerModel.findOne({ where: { email } });
-            if (!user) return reply.code(401).send({ error: 'Invalid credentials' });
-
-            // compare password with stored hash
-            const ok = await bcrypt.compare(password, (user as any).passwordHash || '');
-            if (!ok) return reply.code(401).send({ error: 'Invalid credentials' });
-
-            // TODO: sign real JWT here
-            return reply.send({
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                token: 'fake-jwt-token',
-            });
-        } catch (err) {
-            fastify.log.error(err);
-            return reply.code(500).send({ error: 'internal server error' });
-        }
-    });
-
-    // -------------------------
     // Create telecaller
     // -------------------------
     fastify.post('/telecallers', async (req, reply) => {

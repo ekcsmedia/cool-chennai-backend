@@ -31,6 +31,7 @@ export const collectionRepo = {
         code?: string;
         title: string;
         address: string;
+        pincode: string,
         customerName : string;
         status? :  CollectionStatus;
         amount: number;
@@ -41,8 +42,8 @@ export const collectionRepo = {
         assignedAgentId?: string | null;
         dueAt?: Date | null;
     }) {
-        if (!payload.title || !payload.address || payload.amount == null) {
-            throw new Error('title, address and amount are required');
+        if (!payload.title || !payload.address || !payload.pincode || payload.amount == null) {
+            throw new Error('title, address, pincode and amount are required');
         }
 
         const t: Transaction = await sequelize.transaction();
@@ -50,6 +51,7 @@ export const collectionRepo = {
             const row = await CollectionModel.create({
                 code: payload.code ?? '',
                 title: payload.title,
+                pincode: payload.pincode,
                 address: payload.address,
                 amount: payload.amount,
                 type: payload.type ?? 'collection',
@@ -106,7 +108,7 @@ export const collectionRepo = {
     },
 
     async findPending(opts?: { agentId?: string }) {
-        const where: any = { status: ['pending', 'in_progress'] };
+        const where: any = { status: ['pending', 'in_progress', 'assigned'] };
 
         if (opts?.agentId) {
             where.assignedAgentId = opts.agentId;
@@ -114,7 +116,10 @@ export const collectionRepo = {
 
         const rows = await CollectionModel.findAll({
             where,
-            order: [['createdAt', 'DESC']],
+            order: [
+                ['pincode', 'ASC'],          // groups by pincode
+                ['createdAt', 'DESC'],       // newest first inside each pincode group
+            ],
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
                 { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
@@ -123,6 +128,7 @@ export const collectionRepo = {
 
         return rows.map((r) => mapCollectionRow(r));
     },
+
 
     async findAll(opts?: { filters?: any; page?: number; limit?: number }) {
         const where: any = {};

@@ -51,11 +51,11 @@ static async listPings(req: FastifyRequest<{ Params: { id: string } }>, rep: Fas
             const body = req.body as any;
             const {
                 code, title, address, amount, type, area, city,
-                customerId, assignedAgentId, dueAt,
+                customerId, assignedAgentId, dueAt, pincode
             } = body ?? {};
 
-            if (!title || !address || !(amount !== undefined)) {
-                return rep.code(400).send({ error: "title, address and amount are required" });
+            if (!title || !address || !pincode || !(amount !== undefined)) {
+                return rep.code(400).send({ error: "title, address, pincode and amount are required" });
             }
 
             if (type && !['collection','pickup','delivery','service'].includes(type)) {
@@ -68,6 +68,7 @@ static async listPings(req: FastifyRequest<{ Params: { id: string } }>, rep: Fas
                 code: generatedCode,
                 title,
                 address,
+                pincode,
                 amount: Number(amount),
                 type: type ?? 'collection',
                 area: area ?? null,

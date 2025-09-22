@@ -34,9 +34,14 @@ export class TelecallerModel
     public readonly updatedAt!: Date;
     public readonly deletedAt!: Date | null;
 
-    /** Verify a plaintext password against stored hash */
     public async verifyPassword(plain: string): Promise<boolean> {
-        return bcrypt.compare(plain, this.passwordHash);
+        console.log("[verifyPassword] Plain password:", plain);
+        console.log("[verifyPassword] Stored hash:", this.passwordHash);
+
+        const match = await bcrypt.compare(plain, this.passwordHash);
+
+        console.log("[verifyPassword] Compare result:", match);
+        return match;
     }
 }
 

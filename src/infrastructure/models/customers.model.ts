@@ -8,6 +8,7 @@ export interface CustomerAttributes {
     name: string;
     phone?: string | null;
     area?: string | null;
+    pincode?: string | null;   // ✅ new field
 
     createdAt?: Date;
     updatedAt?: Date;
@@ -15,15 +16,21 @@ export interface CustomerAttributes {
 }
 
 // 2) Creation attributes (id is generated)
-export type CustomerCreationAttributes = Optional<CustomerAttributes, "id" | "createdAt" | "updatedAt" | "deletedAt">;
+export type CustomerCreationAttributes = Optional<
+    CustomerAttributes,
+    "id" | "createdAt" | "updatedAt" | "deletedAt"
+>;
 
 // 3) Model class
-export class CustomerModel extends Model<CustomerAttributes, CustomerCreationAttributes>
-    implements CustomerAttributes {
+export class CustomerModel
+    extends Model<CustomerAttributes, CustomerCreationAttributes>
+    implements CustomerAttributes
+{
     public id!: string;
     public name!: string;
     public phone!: string | null;
     public area!: string | null;
+    public pincode!: string | null;   // ✅ new field
 
     // timestamps
     public readonly createdAt!: Date;
@@ -51,6 +58,17 @@ CustomerModel.init(
             type: DataTypes.STRING,
             allowNull: true,
         },
+        pincode: {
+            type: DataTypes.STRING(6), // ✅ store as string to preserve leading zeros
+            allowNull: false,
+            defaultValue: '000000',
+            validate: {
+                is: {
+                    args: [/^\d{6}$/], // must be exactly 6 digits
+                    msg: "Pincode must be exactly 6 digits",
+                },
+            },
+        },
     },
     {
         sequelize,
@@ -60,4 +78,3 @@ CustomerModel.init(
         underscored: false,
     }
 );
-

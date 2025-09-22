@@ -9,7 +9,8 @@ export async function customerRoutes(app: FastifyInstance) {
     app.delete("/customers/:id", CustomerController.remove);
 
     // optional "extra" endpoints similar to agent extras
-    app.get("/customers/:id/details", CustomerController.getOne); // alias for single fetch
+    // app.get("/customers/:id/details", CustomerController.getOne);
+    // alias for single fetch
     // You could add status/lastSeen if business logic requires:
     // app.put("/customers/:id/status", CustomerController.updateStatus);
     // app.put("/customers/:id/last-seen", CustomerController.updateLastSeen);

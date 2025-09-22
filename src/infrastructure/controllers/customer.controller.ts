@@ -9,7 +9,7 @@ const repo = new CustomerRepository();
 export class CustomerController {
     static async create(req: FastifyRequest, rep: FastifyReply) {
         try {
-            const payload = req.body as { name: string; phone?: string; area?: string };
+            const payload = req.body as { name: string; phone?: string; area?: string; pincode: string };
             const created = await repo.create(payload);
             return rep.code(201).send(created);
         } catch (err) {
@@ -59,7 +59,7 @@ export class CustomerController {
         const tx: Transaction = await sequelize.transaction();
         try {
             const { id } = req.params;
-            const payload = req.body as Partial<{ name: string; phone: string; area: string }>;
+            const payload = req.body as Partial<{ name: string; phone: string; area: string; pincode: string  }>;
 
             // repo.update may return [affected, rows] or something similar
             const result = await repo.update(id, payload, tx);

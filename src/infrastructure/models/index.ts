@@ -151,6 +151,14 @@ CollectionModel.init(
         code: { type: DataTypes.STRING, allowNull: false, unique: true },
         title: { type: DataTypes.STRING, allowNull: false, unique: false },
         address: { type: DataTypes.STRING, allowNull: false, unique: false },
+        pincode: {
+            type: DataTypes.STRING(6),
+            allowNull: false,
+            validate: {
+                isNumeric: true,
+                len: [6, 6], // must be exactly 6 chars long
+            },
+        },
         type: { type: DataTypes.ENUM('pickup', 'delivery', 'service', 'collection'), allowNull: false },
         area: DataTypes.STRING,
         city: DataTypes.STRING,
