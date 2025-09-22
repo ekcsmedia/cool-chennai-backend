@@ -65,7 +65,6 @@ export async function registerAuthRoutes(fastify: FastifyInstance) {
                 // don't reveal which is missing
                 return reply.code(401).send({ error: 'Invalid credentials' });
             }
-
             const ok = await agent.verifyPassword(password);
             if (!ok) return reply.code(401).send({ error: 'Invalid credentials' });
 
