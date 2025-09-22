@@ -12,6 +12,7 @@ import {deviceTokenRoutes} from "./deviceTokenRoutes";
 import {reminderRoutes} from "./reminder_routes";
 import {customerRoutes} from "./customer.routes";
 import {registerTelecallRoutes} from "../controllers/telecall.controller";
+import {registerAuthRoutes} from "./auth.routes";
 
 export const registerRoutes = (app: FastifyInstance) => {
     app.register(dashboardRoutes, { prefix: "/api" });
@@ -26,4 +27,5 @@ export const registerRoutes = (app: FastifyInstance) => {
     app.register(reminderRoutes, {prefix:"/api"});
     app.register(customerRoutes, {prefix:"/api"});
     app.register(registerTelecallRoutes, {prefix:"/api"});
+    app.register(registerAuthRoutes, {prefix:"/api"});
 };

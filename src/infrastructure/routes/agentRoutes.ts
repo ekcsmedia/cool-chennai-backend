@@ -12,4 +12,6 @@ export async function agentRoutes(app: FastifyInstance) {
     app.get("/agents/:id/details", AgentController.findById);
     app.put("/agents/:id/status", AgentController.updateStatus);
     app.put("/agents/:id/last-seen", AgentController.updateLastSeen);
+
+
 }
