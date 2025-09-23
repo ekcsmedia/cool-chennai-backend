@@ -38,7 +38,7 @@ export const agentRepo = {
         try {
             // prefer explicit active flag:
             if ((AgentModel as any).rawAttributes && (AgentModel as any).rawAttributes.active) {
-                return AgentModel.count({ where: { active: true } });
+                return AgentModel.count({ where: { isActive: true } });
             }
             // fallback: agents seen in last 10 minutes
             const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
@@ -63,7 +63,7 @@ export const agentRepo = {
         return row ? row.toJSON() : null;
     },
 
-    async updateStatus(id: string, status: string) {
+    async updateStatus(id: string, status: 'on_duty' | 'idle' | 'off_duty') {
         await AgentModel.update({ status }, { where: { id } });
     },
 
