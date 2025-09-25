@@ -9,7 +9,7 @@ const repo = new CustomerRepository();
 export class CustomerController {
     static async create(req: FastifyRequest, rep: FastifyReply) {
         try {
-            const payload = req.body as { name: string; phone?: string; area?: string; pincode: string };
+            const payload = req.body as { name: string; phone1: string; phone2?: string; phone3?: string; area?: string; pincode: string };
             const created = await repo.create(payload);
             return rep.code(201).send(created);
         } catch (err) {
