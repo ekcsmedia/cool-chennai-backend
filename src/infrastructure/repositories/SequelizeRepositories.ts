@@ -61,7 +61,7 @@ export const collectionRepo = {
                 customerName: payload.customerName ?? null,
                 assignedAgentId: payload.assignedAgentId ?? null,
                 dueAt: payload.dueAt ?? null,
-                status: payload.status ?? 'pending',
+                status: payload.status ?? 'allotted',
             }, { transaction: t });
 
             if (payload.assignedAgentId) {
@@ -102,13 +102,13 @@ export const collectionRepo = {
 
     async getSummaryCounts() {
         const total = await CollectionModel.count();
-        const pending = await CollectionModel.count({ where: { status: 'pending' } });
+        const pending = await CollectionModel.count({ where: { status: 'allotted' } });
         const completed = await CollectionModel.count({ where: { status: 'completed' } });
         return { total, pending, completed };
     },
 
     async findPending(opts?: { agentId?: string }) {
-        const where: any = { status: ['pending', 'in_progress', 'assigned'] };
+        const where: any = { status: ['pending', 'allocated'] };
 
         if (opts?.agentId) {
             where.assignedAgentId = opts.agentId;
@@ -174,7 +174,7 @@ export const collectionRepo = {
             if (!agent) throw new Error(`Agent not found: ${agentId}`);
 
             await CollectionModel.update(
-                { assignedAgentId: agentId, status: 'assigned' },
+                { assignedAgentId: agentId, status: 'allocated' },
                 { where: { id: collectionId }, transaction: t }
             );
 
@@ -248,12 +248,12 @@ export const collectionRepo = {
         const col = await CollectionModel.findByPk(collectionId, txOptions);
         if (!col) throw new Error('Collection not found');
 
-        if (col.status === 'in_progress' && col.assignedAgentId && col.assignedAgentId !== agentId) {
+        if (col.status === 'allocated' && col.assignedAgentId && col.assignedAgentId !== agentId) {
             throw new Error('Collection already being tracked by another agent');
         }
 
         col.assignedAgentId = agentId;
-        col.status = 'in_progress';
+        col.status = 'allocated';
         (col as any).trackingStartedAt = new Date();
         await col.save(txOptions);
 
@@ -285,7 +285,7 @@ export const collectionRepo = {
         (col as any).lastLat = opts.lat ?? (col as any).lastLat;
         (col as any).lastLng = opts.lng ?? (col as any).lastLng;
         (col as any).batteryLevel = opts.batteryLevel ?? (col as any).batteryLevel;
-        col.status = col.status === 'completed' ? col.status : 'assigned';
+        col.status = col.status === 'completed' ? col.status : 'allotted';
 
         await col.save(txOptions);
 
