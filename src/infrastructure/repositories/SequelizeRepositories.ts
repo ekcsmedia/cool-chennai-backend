@@ -156,7 +156,7 @@ export const collectionRepo = {
             offset,
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
-                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1','phone2', 'phone3', 'area'] },
             ],
         });
 
@@ -167,7 +167,7 @@ export const collectionRepo = {
         const row = await CollectionModel.findByPk(id, {
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
-                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1','phone2', 'phone3', 'area'] },
             ],
         });
         return row ? mapCollectionRow(row) : null;
@@ -200,7 +200,7 @@ export const collectionRepo = {
             const updatedRow = await CollectionModel.findByPk(collectionId, {
                 include: [
                     { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
-                    { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                    { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1','phone2', 'phone3', 'area'] },
                 ],
             });
 
@@ -224,7 +224,7 @@ export const collectionRepo = {
         const row = await CollectionModel.findByPk(collectionId, {
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
-                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1','phone2', 'phone3', 'area'] },
             ],
         });
         return row ? mapCollectionRow(row) : null;
@@ -241,7 +241,7 @@ export const collectionRepo = {
         const row = await CollectionModel.findByPk(collectionId, {
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
-                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1','phone2', 'phone3', 'area'] },
             ],
         });
         return row ? mapCollectionRow(row) : null;
@@ -268,7 +268,7 @@ export const collectionRepo = {
         const collectionPlain = (await CollectionModel.findByPk(collectionId, {
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
-                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1','phone2', 'phone3', 'area'] },
             ],
         }))?.toJSON() as any;
 
@@ -300,7 +300,7 @@ export const collectionRepo = {
         const collectionPlain = (await CollectionModel.findByPk(collectionId, {
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
-                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1','phone2', 'phone3', 'area'] },
             ],
         }))?.toJSON() as any;
 
@@ -349,7 +349,7 @@ export const collectionRepo = {
         const row = await CollectionModel.findByPk(collectionId, {
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
-                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1','phone2', 'phone3', 'area'] },
             ],
         });
         return row ? mapCollectionRow(row) : null;
@@ -367,7 +367,7 @@ export const collectionRepo = {
         const row = await CollectionModel.findByPk(collectionId, {
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
-                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1','phone2', 'phone3', 'area'] },
             ],
         });
         return row ? mapCollectionRow(row) : null;
