@@ -85,7 +85,7 @@ export const collectionRepo = {
             const created = await CollectionModel.findByPk(row.id, {
                 include: [
                     { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
-                    { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                    { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1', 'phone2', 'phone3', 'area', 'pincode'] },
                 ],
             });
 
