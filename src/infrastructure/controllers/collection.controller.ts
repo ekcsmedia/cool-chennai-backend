@@ -75,7 +75,7 @@ static async listPings(req: FastifyRequest<{ Params: { id: string } }>, rep: Fas
                 city: city ?? null,
                 customerId: customerId ?? null,
                 assignedAgentId: assignedAgentId ?? null,
-                status: 'pending',
+                status: 'allotted',
                 dueAt: dueAt ? new Date(dueAt) : null,
             };
 

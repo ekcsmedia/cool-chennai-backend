@@ -27,78 +27,86 @@ function mapCollectionRow(row: any) {
 }
 
 export const collectionRepo = {
-    async create(payload: {
-        code?: string;
-        title: string;
-        address: string;
-        pincode: string,
-        customerName : string;
-        status? :  CollectionStatus;
-        amount: number;
-        type?: 'pickup' | 'delivery' | 'service' | 'collection';
-        area?: string | null;
-        city?: string | null;
-        customerId?: string | null;
-        assignedAgentId?: string | null;
-        dueAt?: Date | null;
-    }) {
-        if (!payload.title || !payload.address || !payload.pincode || payload.amount == null) {
-            throw new Error('title, address, pincode and amount are required');
-        }
+        async create(payload: {
+            code?: string;
+            title: string;
+            address: string;
+            pincode: string,
+            customerName : string;
+            status? :  CollectionStatus;
+            amount: number;
+            type?: 'pickup' | 'delivery' | 'service' | 'collection';
+            area?: string | null;
+            city?: string | null;
+            customerId?: string | null;
+            assignedAgentId?: string | null;
+            dueAt?: Date | null;
+        }) {
+            if (!payload.title || !payload.address || !payload.pincode || payload.amount == null) {
+                throw new Error('title, address, pincode and amount are required');
+            }
 
-        const t: Transaction = await sequelize.transaction();
-        try {
-            const row = await CollectionModel.create({
-                code: payload.code ?? '',
-                title: payload.title,
-                pincode: payload.pincode,
-                address: payload.address,
-                amount: payload.amount,
-                type: payload.type ?? 'collection',
-                area: payload.area ?? null,
-                city: payload.city ?? null,
-                customerId: payload.customerId ?? null,
-                customerName: payload.customerName ?? null,
-                assignedAgentId: payload.assignedAgentId ?? null,
-                dueAt: payload.dueAt ?? null,
-                status: payload.status ?? 'allotted',
-            }, { transaction: t });
+            const t: Transaction = await sequelize.transaction();
+            try {
+                // choose initial status: explicit payload.status wins,
+                // otherwise if an agent is provided treat it as already allocated.
+                const initialStatus = payload.status ?? (payload.assignedAgentId ? 'allocated' : 'allotted');
 
-            if (payload.assignedAgentId) {
-                const agentExists = await AgentModel.findByPk(payload.assignedAgentId, { transaction: t });
-                if (!agentExists) {
-                    throw new Error(`Agent not found: ${payload.assignedAgentId}`);
+                const row = await CollectionModel.create({
+                    code: payload.code ?? '',
+                    title: payload.title,
+                    pincode: payload.pincode,
+                    address: payload.address,
+                    amount: payload.amount,
+                    type: payload.type ?? 'collection',
+                    area: payload.area ?? null,
+                    city: payload.city ?? null,
+                    customerId: payload.customerId ?? null,
+                    customerName: payload.customerName ?? null,
+                    assignedAgentId: payload.assignedAgentId ?? null,
+                    dueAt: payload.dueAt ?? null,
+                    status: initialStatus,
+                }, { transaction: t });
+
+                if (payload.assignedAgentId) {
+                    // validate agent existence inside same transaction
+                    const agentExists = await AgentModel.findByPk(payload.assignedAgentId, { transaction: t });
+                    if (!agentExists) {
+                        throw new Error(`Agent not found: ${payload.assignedAgentId}`);
+                    }
+
+                    await AssignmentModel.create(
+                        {
+                            collectionId: row.id,
+                            agentId: payload.assignedAgentId,
+                            assignedAt: new Date(),
+                        },
+                        { transaction: t }
+                    );
+
+                    // (Optional) If you want an assignment history row to also reflect who allocated it,
+                    // you can store `assignedBy` if you have that context.
                 }
 
-                await AssignmentModel.create(
-                    {
-                        collectionId: row.id,
-                        agentId: payload.assignedAgentId,
-                        assignedAt: new Date(),
-                    },
-                    { transaction: t }
-                );
+                await t.commit();
+
+                const created = await CollectionModel.findByPk(row.id, {
+                    include: [
+                        { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
+                        { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1', 'phone2', 'phone3', 'area', 'pincode'] },
+                    ],
+                });
+
+                return created ? mapCollectionRow(created) : mapCollectionRow(row);
+            } catch (err) {
+                try {
+                    await t.rollback();
+                } catch (_e) {
+                    // ignore rollback errors
+                }
+                throw err;
             }
-
-            await t.commit();
-
-            const created = await CollectionModel.findByPk(row.id, {
-                include: [
-                    { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name', 'phone'] },
-                    { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1', 'phone2', 'phone3', 'area', 'pincode'] },
-                ],
-            });
-
-            return created ? mapCollectionRow(created) : mapCollectionRow(row);
-        } catch (err) {
-            try {
-                await t.rollback();
-            } catch (_e) {
-                // ignore rollback errors
-            }
-            throw err;
-        }
-    },
+        },
 
     async getSummaryCounts() {
         const total = await CollectionModel.count();
@@ -108,7 +116,7 @@ export const collectionRepo = {
     },
 
     async findPending(opts?: { agentId?: string }) {
-        const where: any = { status: ['pending', 'allocated'] };
+        const where: any = { status: ['allotted', 'allocated'] };
 
         if (opts?.agentId) {
             where.assignedAgentId = opts.agentId;
@@ -122,7 +130,7 @@ export const collectionRepo = {
             ],
             include: [
                 { model: AgentModel, as: 'assignedAgent', attributes: ['id', 'name'] },
-                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone', 'area'] },
+                { model: CustomerModel, as: 'customer', attributes: ['id', 'name', 'phone1','phone2', 'phone3', 'area'] },
             ],
         });
 
